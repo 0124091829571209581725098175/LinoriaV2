@@ -189,6 +189,8 @@ function Library:MakeDraggable(Instance, Cutoff)
                 BorderColor3 = 'AccentColor';
             });
 
+            Instance.Visible = false;
+
             local NewPos = Instance.Position;
 
             while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
@@ -207,6 +209,7 @@ function Library:MakeDraggable(Instance, Cutoff)
             Instance.Position = NewPos;
             Library:RemoveFromRegistry(Ghost);
             Ghost:Destroy();
+            Instance.Visible = true;
         end;
     end)
 end;
@@ -3125,6 +3128,27 @@ function Library:CreateWindow(...)
     Library:GiveSignal(RenderStepped:Connect(function()
         WindowLabel.TextColor3 = Library.CurrentRainbowColor or Library.AccentColor;
     end));
+
+    local GameName = game.Name;
+
+    pcall(function()
+        GameName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name;
+    end);
+
+    local WindowGameLabel = Library:CreateLabel({
+        AnchorPoint = Vector2.new(1, 0);
+        Position = UDim2.new(1, -8, 0, 0);
+        Size = UDim2.new(0, 200, 0, 25);
+        Text = GameName;
+        TextSize = 13;
+        TextXAlignment = Enum.TextXAlignment.Right;
+        TextTruncate = Enum.TextTruncate.AtEnd;
+        ZIndex = 1;
+        Parent = Inner;
+    });
+
+    Library:RemoveFromRegistry(WindowGameLabel);
+    WindowGameLabel.TextColor3 = Color3.fromRGB(180, 0, 0);
 
     local MainSectionOuter = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
