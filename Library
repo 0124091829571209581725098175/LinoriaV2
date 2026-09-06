@@ -175,16 +175,38 @@ function Library:MakeDraggable(Instance, Cutoff)
                 return;
             end;
 
+            local Ghost = Library:Create('Frame', {
+                BackgroundTransparency = 1;
+                BorderColor3 = Library.AccentColor;
+                Size = Instance.Size;
+                Position = Instance.Position;
+                AnchorPoint = Instance.AnchorPoint;
+                ZIndex = 1000;
+                Parent = ScreenGui;
+            });
+
+            Library:AddToRegistry(Ghost, {
+                BorderColor3 = 'AccentColor';
+            });
+
+            local NewPos = Instance.Position;
+
             while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-                Instance.Position = UDim2.new(
+                NewPos = UDim2.new(
                     0,
                     Mouse.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
                     0,
                     Mouse.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
                 );
 
+                Ghost.Position = NewPos;
+
                 RenderStepped:Wait();
             end;
+
+            Instance.Position = NewPos;
+            Library:RemoveFromRegistry(Ghost);
+            Ghost:Destroy();
         end;
     end)
 end;
@@ -1325,6 +1347,105 @@ do
         Options[Idx] = KeyPicker;
 
         return self;
+    end;
+
+    function Funcs:AddButton(Idx, Info)
+        local ParentObj = self;
+        local ToggleLabel = self.TextLabel;
+
+        local Text;
+        local Func;
+        local Tooltip;
+
+        if type(Idx) == 'table' then
+            Text = Idx.Text;
+            Func = Idx.Func;
+            Tooltip = Idx.Tooltip;
+        elseif type(Idx) == 'string' and type(Info) == 'function' then
+            Text = Idx;
+            Func = Info;
+        elseif type(Idx) == 'string' and type(Info) == 'table' then
+            Text = Idx;
+            Func = Info.Func;
+            Tooltip = Info.Tooltip;
+        end;
+
+        assert(type(Text) == 'string', 'AddButton: Missing `Text` string.');
+        assert(type(Func) == 'function', 'AddButton: `Func` callback is missing.');
+
+        local XSize = select(1, Library:GetTextBounds(Text, Library.Font, 13)) + 12;
+
+        if XSize < 28 then
+            XSize = 28;
+        end;
+
+        local ButtonOuter = Library:Create('Frame', {
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderColor3 = Color3.new(0, 0, 0);
+            Size = UDim2.new(0, XSize, 0, 15);
+            ZIndex = 6;
+            Parent = ToggleLabel;
+        });
+
+        local ButtonInner = Library:Create('Frame', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 7;
+            Parent = ButtonOuter;
+        });
+
+        Library:AddToRegistry(ButtonInner, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+        });
+
+        local ButtonLabel = Library:CreateLabel({
+            Size = UDim2.new(1, 0, 1, 0);
+            TextSize = 13;
+            Text = Text;
+            ZIndex = 8;
+            Parent = ButtonInner;
+        });
+
+        Library:Create('UIGradient', {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
+            });
+            Rotation = 90;
+            Parent = ButtonInner;
+        });
+
+        Library:OnHighlight(ButtonOuter, ButtonOuter,
+            { BorderColor3 = 'AccentColor' },
+            { BorderColor3 = 'Black' }
+        );
+
+        if type(Tooltip) == 'string' then
+            Library:AddToolTip(Tooltip, ButtonOuter);
+        end;
+
+        ButtonOuter.InputBegan:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+                Library:SafeCallback(Func);
+            end;
+        end);
+
+        local Button = {
+            Type = 'Button';
+            Outer = ButtonOuter;
+            Inner = ButtonInner;
+            Label = ButtonLabel;
+            Func = Func;
+        };
+
+        if ParentObj.Addons then
+            table.insert(ParentObj.Addons, Button);
+        end;
+
+        return ParentObj;
     end;
 
     BaseAddons.__index = Funcs;
@@ -2683,7 +2804,7 @@ do
     Library.NotificationArea = Library:Create('Frame', {
         BackgroundTransparency = 1;
         AnchorPoint = Vector2.new(0.5, 1);
-        Position = UDim2.new(0.5, 0, 1, -75);
+        Position = UDim2.new(0.5, 0, 1, -200);
         Size = UDim2.new(0, 300, 0, 200);
         ZIndex = 100;
         Parent = ScreenGui;
@@ -2991,13 +3112,19 @@ function Library:CreateWindow(...)
     });
 
     local WindowLabel = Library:CreateLabel({
-        Position = UDim2.new(0, 7, 0, 0);
-        Size = UDim2.new(0, 0, 0, 25);
+        Position = UDim2.new(0, 0, 0, 0);
+        Size = UDim2.new(1, 0, 0, 25);
         Text = Config.Title or '';
-        TextXAlignment = Enum.TextXAlignment.Left;
+        TextXAlignment = Enum.TextXAlignment.Center;
         ZIndex = 1;
         Parent = Inner;
     });
+
+    Library:RemoveFromRegistry(WindowLabel);
+
+    Library:GiveSignal(RenderStepped:Connect(function()
+        WindowLabel.TextColor3 = Library.CurrentRainbowColor or Library.AccentColor;
+    end));
 
     local MainSectionOuter = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
@@ -3059,6 +3186,9 @@ function Library:CreateWindow(...)
 
     function Window:SetWindowTitle(Title)
         WindowLabel.Text = Title;
+        WindowLabel.Position = UDim2.new(0, 0, 0, 0);
+        WindowLabel.Size = UDim2.new(1, 0, 0, 25);
+        WindowLabel.TextXAlignment = Enum.TextXAlignment.Center;
     end;
 
     function Window:AddTab(Name)
@@ -3066,6 +3196,8 @@ function Library:CreateWindow(...)
             Groupboxes = {};
             Tabboxes = {};
         };
+
+        Tab.Name = Name;
 
         local TabButtonWidth = Library:GetTextBounds(Name, Library.Font, 16);
 
@@ -3271,6 +3403,16 @@ function Library:CreateWindow(...)
             Groupbox:Resize();
 
             Tab.Groupboxes[Info.Name] = Groupbox;
+
+            local TabName = string.lower(tostring(Tab.Name or ''));
+
+            if (TabName == 'ui settings' or TabName == 'ui' or TabName == 'settings') and not Tab._CopyJobIdAdded then
+                Tab._CopyJobIdAdded = true;
+                Groupbox:AddButton('Copy JobId', function()
+                    pcall(setclipboard, tostring(game.JobId));
+                    Library:Notify('Copied JobId', 2);
+                end);
+            end;
 
             return Groupbox;
         end;
@@ -3523,8 +3665,6 @@ function Library:CreateWindow(...)
         if Toggled then
             -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
             Outer.Visible = true;
-
-            -- Custom cursor removed: leave the default Roblox cursor alone (do not touch MouseIconEnabled).
         end;
 
         for _, Desc in next, Outer:GetDescendants() do
