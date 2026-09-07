@@ -30,8 +30,8 @@ local Library = {
     HudRegistry = {};
 
     FontColor = Color3.fromRGB(255, 255, 255);
-    MainColor = Color3.fromRGB(28, 28, 28);
-    BackgroundColor = Color3.fromRGB(20, 20, 20);
+    MainColor = Color3.fromRGB(24, 24, 24);
+    BackgroundColor = Color3.fromRGB(16, 16, 16);
     AccentColor = Color3.fromRGB(0, 85, 255);
     OutlineColor = Color3.fromRGB(50, 50, 50);
     RiskColor = Color3.fromRGB(255, 50, 50),
@@ -1204,6 +1204,7 @@ do
             end;
 
             Library.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
+            Library:RefreshKeybindVisibility();
         end;
 
         function KeyPicker:GetState()
@@ -3263,8 +3264,6 @@ do
         { BorderColor3 = 'Black' }
     );
 
-    local RenderServerList;
-
     local SortRow = Library:Create('Frame', {
         BackgroundTransparency = 1;
         Size = UDim2.new(1, 0, 0, 18);
@@ -3281,21 +3280,39 @@ do
         end;
     end;
 
+    function Library:UpdateSortButtons()
+        local Panel = Library.ToolbarPanels['Servers'];
+
+        if not Panel then
+            return;
+        end;
+
+        for _, Desc in next, Panel:GetDescendants() do
+            if Desc.Name == 'SortModeBtn' then
+                SetPanelButtonText(Desc, 'Sort: ' .. Library.ServerSortMode);
+            elseif Desc.Name == 'SortDirBtn' then
+                SetPanelButtonText(Desc, Library.ServerSortDesc and 'Desc' or 'Asc');
+            end;
+        end;
+    end;
+
     local SortModeOuter = CreatePanelButton('Sort: Players', UDim2.new(0.5, -2, 0, 18), SortRow, function()
         Library.ServerSortMode = Library.ServerSortMode == 'Players' and 'Ping' or 'Players';
-        SetPanelButtonText(SortModeOuter, 'Sort: ' .. Library.ServerSortMode);
-        RenderServerList();
+        Library:UpdateSortButtons();
+        Library:RenderServerList();
     end);
 
     SortModeOuter.Position = UDim2.new(0, 0, 0, 0);
+    SortModeOuter.Name = 'SortModeBtn';
 
     local SortDirOuter = CreatePanelButton('Desc', UDim2.new(0.5, -2, 0, 18), SortRow, function()
         Library.ServerSortDesc = not Library.ServerSortDesc;
-        SetPanelButtonText(SortDirOuter, Library.ServerSortDesc and 'Desc' or 'Asc');
-        RenderServerList();
+        Library:UpdateSortButtons();
+        Library:RenderServerList();
     end);
 
     SortDirOuter.Position = UDim2.new(0.5, 2, 0, 0);
+    SortDirOuter.Name = 'SortDirBtn';
 
     local BrowserList = Library:Create('ScrollingFrame', {
         BackgroundTransparency = 1;
@@ -3407,7 +3424,7 @@ do
 
     local LastServers = {};
 
-    RenderServerList = function()
+    function Library:RenderServerList()
         for _, Child in next, BrowserList:GetChildren() do
             if not Child:IsA('UIListLayout') then
                 Child:Destroy();
@@ -3470,7 +3487,7 @@ do
             end;
 
             LastServers = Data.data;
-            RenderServerList();
+            Library:RenderServerList();
         end);
     end;
 
@@ -3483,6 +3500,7 @@ do
     local function RefreshServerInfo()
         ServerCount.Text = 'Players: ' .. #Players:GetPlayers() .. '/' .. tostring(Players.MaxPlayers);
         RefreshServerBrowser();
+        Library:UpdateSortButtons();
     end;
 
     local PlayersOuter, PlayersContainer = CreatePanel('Players', 380, 360, 260, 200);
@@ -4192,6 +4210,34 @@ end;
 
 Library.NotificationStyle = 'Default';
 Library.NotificationPosition = 'Bottom';
+Library.KeybindIndicatorEnabled = true;
+
+function Library:SetKeybindIndicator(Bool)
+    Library.KeybindIndicatorEnabled = Bool;
+    Library:RefreshKeybindVisibility();
+end;
+
+function Library:RefreshKeybindVisibility()
+    if not Library.KeybindFrame or not Library.KeybindContainer then
+        return;
+    end;
+
+    if not Library.KeybindIndicatorEnabled then
+        Library.KeybindFrame.Visible = false;
+        return;
+    end;
+
+    local Any = false;
+
+    for _, Label in next, Library.KeybindContainer:GetChildren() do
+        if Label:IsA('TextLabel') and Label.Visible then
+            Any = true;
+            break;
+        end;
+    end;
+
+    Library.KeybindFrame.Visible = Any;
+end;
 
 function Library:SetNotificationStyle(Style)
     Library.NotificationStyle = Style;
@@ -4919,6 +4965,14 @@ function Library:CreateWindow(...)
                     Text = 'Notification Position';
                     Callback = function(Value)
                         Library:SetNotificationPosition(Value);
+                    end;
+                });
+
+                Groupbox:AddToggle('KeybindIndicator', {
+                    Text = 'Keybind Indicator';
+                    Default = true;
+                    Callback = function(Value)
+                        Library:SetKeybindIndicator(Value);
                     end;
                 });
             end;
