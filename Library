@@ -3191,7 +3191,7 @@ do
 
     local ServerCount = CreateInfoRow('Players: ...', ServersContainer);
 
-    CreatePanelButton('Rejoin Server', UDim2.new(1, 0, 0, 20), ServersContainer, function()
+    CreatePanelButton('Rejoin Current Server', UDim2.new(1, 0, 0, 20), ServersContainer, function()
         pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer);
         end);
@@ -3279,7 +3279,7 @@ do
         BrowserList.CanvasSize = UDim2.fromOffset(0, BrowserLayout.AbsoluteContentSize.Y);
     end);
 
-    local function AddServerRow(Id, Playing, Max, Fps, Current)
+    local function AddServerRow(S, Current)
         local Row = Library:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 0, 18);
@@ -3287,22 +3287,32 @@ do
             Parent = BrowserList;
         });
 
+        local Text = S.playing .. '/' .. S.maxPlayers .. '  ' .. math.floor(S.fps or 0) .. 'fps';
+
+        if S.ping then
+            Text = Text .. '  ' .. tostring(S.ping) .. 'ms';
+        end;
+
+        if Current then
+            Text = Text .. ' (you)';
+        end;
+
         Library:CreateLabel({
             Position = UDim2.new(0, 0, 0, 0);
-            Size = UDim2.new(1, -44, 0, 18);
+            Size = UDim2.new(1, -84, 0, 18);
             TextSize = 13;
-            Text = Playing .. '/' .. Max .. '  ' .. Fps .. ' fps' .. (Current and ' (you)' or '');
+            Text = Text;
             TextXAlignment = Enum.TextXAlignment.Left;
             TextTruncate = Enum.TextTruncate.AtEnd;
             ZIndex = 94;
             Parent = Row;
         });
 
-        if not Current then
+        local function Small(Text, OffsetX, Callback)
             local BOuter = Library:Create('Frame', {
                 BackgroundColor3 = Color3.new(0, 0, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
-                Position = UDim2.new(1, -38, 0, 1);
+                Position = UDim2.new(1, OffsetX, 0, 1);
                 Size = UDim2.new(0, 36, 0, 16);
                 ZIndex = 94;
                 Parent = Row;
@@ -3325,7 +3335,7 @@ do
             Library:CreateLabel({
                 Size = UDim2.new(1, 0, 1, 0);
                 TextSize = 12;
-                Text = 'Join';
+                Text = Text;
                 ZIndex = 96;
                 Parent = BInner;
             });
@@ -3337,10 +3347,21 @@ do
 
             BOuter.InputBegan:Connect(function(Input)
                 if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
-                    pcall(function()
-                        TeleportService:TeleportToPlaceInstance(game.PlaceId, Id, LocalPlayer);
-                    end);
+                    Library:SafeCallback(Callback);
                 end;
+            end);
+        end;
+
+        Small('ID', -78, function()
+            pcall(setclipboard, tostring(S.id));
+            Library:Notify('Copied JobId', 2);
+        end);
+
+        if not Current then
+            Small('Join', -38, function()
+                pcall(function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, S.id, LocalPlayer);
+                end);
             end);
         end;
     end;
@@ -3387,7 +3408,7 @@ do
                 end;
 
                 if S.id and S.playing and S.maxPlayers then
-                    AddServerRow(S.id, S.playing, S.maxPlayers, S.fps or 0, S.id == game.JobId);
+                    AddServerRow(S, S.id == game.JobId);
                     Shown = Shown + 1;
                 end;
             end;
@@ -3412,8 +3433,8 @@ do
     local PlayerList = Library:Create('ScrollingFrame', {
         BackgroundTransparency = 1;
         BorderSizePixel = 0;
-        LayoutOrder = 2;
-        Size = UDim2.new(1, 0, 1, -22);
+        LayoutOrder = 3;
+        Size = UDim2.new(1, 0, 1, -46);
         CanvasSize = UDim2.new(0, 0, 0, 0);
         ScrollBarThickness = 2;
         ZIndex = 92;
@@ -3434,14 +3455,36 @@ do
     local function AddPlayerRow(Target)
         local Row = Library:Create('Frame', {
             BackgroundTransparency = 1;
-            Size = UDim2.new(1, 0, 0, 18);
+            Size = UDim2.new(1, 0, 0, 22);
             ZIndex = 93;
             Parent = PlayerList;
         });
 
+        local Avatar = Library:Create('ImageLabel', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Position = UDim2.new(0, 0, 0, 1);
+            Size = UDim2.new(0, 20, 0, 20);
+            ZIndex = 94;
+            Parent = Row;
+        });
+
+        task.spawn(function()
+            local Ok, Thumb = pcall(function()
+                return Players:GetUserThumbnailAsync(Target.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48);
+            end);
+
+            if Ok and Thumb and Avatar.Parent then
+                pcall(function()
+                    Avatar.Image = Thumb;
+                end);
+            end;
+        end);
+
         Library:CreateLabel({
-            Position = UDim2.new(0, 0, 0, 0);
-            Size = UDim2.new(1, -140, 0, 18);
+            Position = UDim2.new(0, 24, 0, 0);
+            Size = UDim2.new(1, -168, 0, 22);
             TextSize = 13;
             Text = Target.DisplayName .. ' (@' .. Target.Name .. ')';
             TextXAlignment = Enum.TextXAlignment.Left;
@@ -3454,7 +3497,7 @@ do
             local BOuter = Library:Create('Frame', {
                 BackgroundColor3 = Color3.new(0, 0, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
-                Position = UDim2.new(1, OffsetX, 0, 1);
+                Position = UDim2.new(1, OffsetX, 0, 3);
                 Size = UDim2.new(0, 32, 0, 16);
                 ZIndex = 94;
                 Parent = Row;
@@ -3548,6 +3591,7 @@ do
     end;
 
     local CountLabel;
+    local SearchBox;
 
     local function RefreshPlayerList()
         for _, Child in next, PlayerList:GetChildren() do
@@ -3556,17 +3600,32 @@ do
             end;
         end;
 
+        local Query = '';
+
+        if SearchBox and SearchBox.Text then
+            Query = SearchBox.Text:lower();
+        end;
+
         local List = Players:GetPlayers();
 
         table.sort(List, function(A, B)
             return A.Name:lower() < B.Name:lower();
         end);
 
+        local Shown = 0;
+
         for _, P in next, List do
-            AddPlayerRow(P);
+            if Query == '' or P.Name:lower():find(Query, 1, true) or P.DisplayName:lower():find(Query, 1, true) then
+                AddPlayerRow(P);
+                Shown = Shown + 1;
+            end;
         end;
 
-        CountLabel.Text = 'Players (' .. #List .. ')';
+        if Query == '' then
+            CountLabel.Text = 'Players (' .. #List .. ')';
+        else
+            CountLabel.Text = 'Players (' .. Shown .. '/' .. #List .. ')';
+        end;
     end;
 
     local PlayersHead = Library:Create('Frame', {
@@ -3579,7 +3638,7 @@ do
 
     CountLabel = Library:CreateLabel({
         Position = UDim2.new(0, 0, 0, 0);
-        Size = UDim2.new(1, -70, 0, 18);
+        Size = UDim2.new(1, 0, 0, 18);
         TextSize = 13;
         Text = 'Players (0)';
         TextXAlignment = Enum.TextXAlignment.Left;
@@ -3587,47 +3646,58 @@ do
         Parent = PlayersHead;
     });
 
-    local RefreshOuter = Library:Create('Frame', {
-        AnchorPoint = Vector2.new(1, 0);
+    local SearchOuter = Library:Create('Frame', {
         BackgroundColor3 = Color3.new(0, 0, 0);
         BorderColor3 = Color3.new(0, 0, 0);
-        Position = UDim2.new(1, 0, 0, 1);
-        Size = UDim2.new(0, 62, 0, 16);
-        ZIndex = 93;
-        Parent = PlayersHead;
+        LayoutOrder = 2;
+        Size = UDim2.new(1, 0, 0, 20);
+        ZIndex = 92;
+        Parent = PlayersContainer;
     });
 
-    local RefreshInner = Library:Create('Frame', {
+    local SearchInner = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.OutlineColor;
         BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
-        ZIndex = 94;
-        Parent = RefreshOuter;
+        ZIndex = 93;
+        Parent = SearchOuter;
     });
 
-    Library:AddToRegistry(RefreshInner, {
+    Library:AddToRegistry(SearchInner, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'OutlineColor';
     });
 
-    Library:CreateLabel({
-        Size = UDim2.new(1, 0, 1, 0);
-        TextSize = 12;
-        Text = 'Refresh';
-        ZIndex = 95;
-        Parent = RefreshInner;
-    });
-
-    Library:OnHighlight(RefreshOuter, RefreshOuter,
+    Library:OnHighlight(SearchOuter, SearchOuter,
         { BorderColor3 = 'AccentColor' },
         { BorderColor3 = 'Black' }
     );
 
-    RefreshOuter.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
-            RefreshPlayerList();
-        end;
+    SearchBox = Library:Create('TextBox', {
+        BackgroundTransparency = 1;
+        ClearTextOnFocus = false;
+        Position = UDim2.new(0, 5, 0, 0);
+        Size = UDim2.new(1, -10, 1, 0);
+        Font = Library.Font;
+        PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
+        PlaceholderText = 'Search players...';
+        Text = '';
+        TextColor3 = Library.FontColor;
+        TextSize = 13;
+        TextXAlignment = Enum.TextXAlignment.Left;
+        ZIndex = 94;
+        Parent = SearchInner;
+    });
+
+    Library:ApplyTextStroke(SearchBox);
+
+    Library:AddToRegistry(SearchBox, {
+        TextColor3 = 'FontColor';
+    });
+
+    SearchBox:GetPropertyChangedSignal('Text'):Connect(function()
+        RefreshPlayerList();
     end);
 
     local ExecOuter, InfoContainer = CreatePanel('Executor', 340, 320, 240, 220);
@@ -3767,6 +3837,7 @@ do
     end;
 
     local FadeCache = {};
+    local PanelOrigPos = {};
 
     local function FadeProps(Desc)
         if Desc:IsA('ImageLabel') then
@@ -3799,7 +3870,16 @@ do
         end;
 
         if Show then
+            local Orig = PanelOrigPos[Frame];
+
+            if not Orig then
+                Orig = Frame.Position;
+                PanelOrigPos[Frame] = Orig;
+            end;
+
+            Frame.Position = UDim2.new(Orig.X.Scale, Orig.X.Offset - 16, Orig.Y.Scale, Orig.Y.Offset);
             Frame.Visible = true;
+            TweenService:Create(Frame, TweenInfo.new(Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = Orig }):Play();
         end;
 
         for _, Desc in next, Frame:GetDescendants() do
