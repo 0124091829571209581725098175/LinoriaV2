@@ -4952,7 +4952,7 @@ function Library:CreateWindow(...)
 
                 Groupbox:AddDropdown('NotificationStyle', {
                     Values = { 'Default', 'Gamesense', 'Simple', 'Gamesensical' };
-                    Default = Library.NotificationStyle or 'Default';
+                    Default = Library.NotificationStyle or 'Simple';
                     Text = 'Notification Style';
                     Callback = function(Value)
                         Library:SetNotificationStyle(Value);
