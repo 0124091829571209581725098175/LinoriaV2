@@ -176,8 +176,8 @@ function Library:MakeDraggable(Instance, Cutoff)
             end;
 
             local Ghost = Library:Create('Frame', {
-                BackgroundTransparency = 1;
-                BorderColor3 = Library.AccentColor;
+                BackgroundColor3 = Color3.new(0, 0, 0);
+                BorderSizePixel = 0;
                 Size = Instance.Size;
                 Position = Instance.Position;
                 AnchorPoint = Instance.AnchorPoint;
@@ -185,8 +185,15 @@ function Library:MakeDraggable(Instance, Cutoff)
                 Parent = ScreenGui;
             });
 
-            Library:AddToRegistry(Ghost, {
-                BorderColor3 = 'AccentColor';
+            local GhostLine = Library:Create('UIStroke', {
+                Color = Library.AccentColor;
+                Thickness = 1;
+                Transparency = 0;
+                Parent = Ghost;
+            });
+
+            Library:AddToRegistry(GhostLine, {
+                Color = 'AccentColor';
             });
 
             Instance.Visible = false;
@@ -207,7 +214,7 @@ function Library:MakeDraggable(Instance, Cutoff)
             end;
 
             Instance.Position = NewPos;
-            Library:RemoveFromRegistry(Ghost);
+            Library:RemoveFromRegistry(GhostLine);
             Ghost:Destroy();
             Instance.Visible = true;
         end;
@@ -2956,6 +2963,676 @@ do
     Library:MakeDraggable(KeybindOuter);
 end;
 
+do
+    local TeleportService = game:GetService('TeleportService');
+
+    Library.ToolbarPanels = {};
+    Library.OpenToolbarPanel = nil;
+    Library.Spectating = nil;
+
+    local ToolbarButtons = {};
+
+    local Holder = Library:Create('Frame', {
+        AnchorPoint = Vector2.new(0.5, 0);
+        BackgroundColor3 = Color3.new(0, 0, 0);
+        BorderSizePixel = 0;
+        Position = UDim2.new(0.5, 0, 0, 10);
+        Size = UDim2.new(0, 232, 0, 42);
+        Visible = false;
+        ZIndex = 90;
+        Parent = ScreenGui;
+    });
+
+    local HolderInner = Library:Create('Frame', {
+        BackgroundColor3 = Library.MainColor;
+        BorderColor3 = Library.OutlineColor;
+        BorderMode = Enum.BorderMode.Inset;
+        Position = UDim2.new(0, 1, 0, 1);
+        Size = UDim2.new(1, -2, 1, -2);
+        ZIndex = 91;
+        Parent = Holder;
+    });
+
+    Library:AddToRegistry(HolderInner, {
+        BackgroundColor3 = 'MainColor';
+        BorderColor3 = 'OutlineColor';
+    });
+
+    local HolderAccent = Library:Create('Frame', {
+        BackgroundColor3 = Library.AccentColor;
+        BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 0, 2);
+        ZIndex = 92;
+        Parent = HolderInner;
+    });
+
+    Library:AddToRegistry(HolderAccent, {
+        BackgroundColor3 = 'AccentColor';
+    });
+
+    local ButtonRow = Library:Create('Frame', {
+        BackgroundTransparency = 1;
+        Position = UDim2.new(0, 0, 0, 2);
+        Size = UDim2.new(1, 0, 1, -2);
+        ZIndex = 92;
+        Parent = HolderInner;
+    });
+
+    Library:Create('UIListLayout', {
+        FillDirection = Enum.FillDirection.Horizontal;
+        HorizontalAlignment = Enum.HorizontalAlignment.Center;
+        VerticalAlignment = Enum.VerticalAlignment.Center;
+        Padding = UDim.new(0, 6);
+        SortOrder = Enum.SortOrder.LayoutOrder;
+        Parent = ButtonRow;
+    });
+
+    local function CreatePanelButton(Text, Size, Parent, Callback)
+        local Outer = Library:Create('Frame', {
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderColor3 = Color3.new(0, 0, 0);
+            Size = Size;
+            ZIndex = 92;
+            Parent = Parent;
+        });
+
+        local Inner = Library:Create('Frame', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 93;
+            Parent = Outer;
+        });
+
+        Library:AddToRegistry(Inner, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+        });
+
+        Library:CreateLabel({
+            Size = UDim2.new(1, 0, 1, 0);
+            TextSize = 13;
+            Text = Text;
+            ZIndex = 94;
+            Parent = Inner;
+        });
+
+        Library:OnHighlight(Outer, Outer,
+            { BorderColor3 = 'AccentColor' },
+            { BorderColor3 = 'Black' }
+        );
+
+        Outer.InputBegan:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+                Library:SafeCallback(Callback);
+            end;
+        end);
+
+        return Outer, Inner;
+    end;
+
+    local function CreatePanel(Name, Width, Height)
+        local Outer = Library:Create('Frame', {
+            AnchorPoint = Vector2.new(0.5, 0);
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderSizePixel = 0;
+            Position = UDim2.new(0.5, 0, 0, 58);
+            Size = UDim2.new(0, Width, 0, Height);
+            Visible = false;
+            ZIndex = 90;
+            Parent = ScreenGui;
+        });
+
+        local Inner = Library:Create('Frame', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Position = UDim2.new(0, 1, 0, 1);
+            Size = UDim2.new(1, -2, 1, -2);
+            ZIndex = 91;
+            Parent = Outer;
+        });
+
+        Library:AddToRegistry(Inner, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+        });
+
+        local Accent = Library:Create('Frame', {
+            BackgroundColor3 = Library.AccentColor;
+            BorderSizePixel = 0;
+            Size = UDim2.new(1, 0, 0, 2);
+            ZIndex = 92;
+            Parent = Inner;
+        });
+
+        Library:AddToRegistry(Accent, {
+            BackgroundColor3 = 'AccentColor';
+        });
+
+        Library:CreateLabel({
+            Position = UDim2.new(0, 8, 0, 4);
+            Size = UDim2.new(1, -16, 0, 16);
+            TextSize = 14;
+            Text = Name;
+            TextXAlignment = Enum.TextXAlignment.Left;
+            ZIndex = 92;
+            Parent = Inner;
+        });
+
+        local Container = Library:Create('Frame', {
+            BackgroundTransparency = 1;
+            Position = UDim2.new(0, 8, 0, 24);
+            Size = UDim2.new(1, -16, 1, -30);
+            ZIndex = 92;
+            Parent = Inner;
+        });
+
+        Library:Create('UIListLayout', {
+            FillDirection = Enum.FillDirection.Vertical;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Padding = UDim.new(0, 4);
+            Parent = Container;
+        });
+
+        Library.ToolbarPanels[Name] = Outer;
+
+        return Outer, Container;
+    end;
+
+    local function CreateInfoRow(Text, Parent)
+        return Library:CreateLabel({
+            Size = UDim2.new(1, 0, 0, 14);
+            TextSize = 13;
+            Text = Text;
+            TextXAlignment = Enum.TextXAlignment.Left;
+            TextTruncate = Enum.TextTruncate.AtEnd;
+            ZIndex = 93;
+            Parent = Parent;
+        });
+    end;
+
+    local ServersOuter, ServersContainer = CreatePanel('Servers', 280, 216);
+
+    local JobLabel = CreateInfoRow('JobId: ...', ServersContainer);
+    local ServerCount = CreateInfoRow('Players: ...', ServersContainer);
+
+    CreatePanelButton('Copy JobId', UDim2.new(1, 0, 0, 20), ServersContainer, function()
+        pcall(setclipboard, tostring(game.JobId));
+        Library:Notify('Copied JobId', 2);
+    end);
+
+    CreatePanelButton('Rejoin Server', UDim2.new(1, 0, 0, 20), ServersContainer, function()
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer);
+        end);
+    end);
+
+    CreatePanelButton('Server Hop', UDim2.new(1, 0, 0, 20), ServersContainer, function()
+        pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer);
+        end);
+    end);
+
+    local JoinOuter = Library:Create('Frame', {
+        BackgroundColor3 = Color3.new(0, 0, 0);
+        BorderColor3 = Color3.new(0, 0, 0);
+        Size = UDim2.new(1, 0, 0, 20);
+        ZIndex = 92;
+        Parent = ServersContainer;
+    });
+
+    local JoinInner = Library:Create('Frame', {
+        BackgroundColor3 = Library.MainColor;
+        BorderColor3 = Library.OutlineColor;
+        BorderMode = Enum.BorderMode.Inset;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 93;
+        Parent = JoinOuter;
+    });
+
+    Library:AddToRegistry(JoinInner, {
+        BackgroundColor3 = 'MainColor';
+        BorderColor3 = 'OutlineColor';
+    });
+
+    Library:OnHighlight(JoinOuter, JoinOuter,
+        { BorderColor3 = 'AccentColor' },
+        { BorderColor3 = 'Black' }
+    );
+
+    local JoinBox = Library:Create('TextBox', {
+        BackgroundTransparency = 1;
+        ClearTextOnFocus = false;
+        Position = UDim2.new(0, 5, 0, 0);
+        Size = UDim2.new(1, -10, 1, 0);
+        Font = Library.Font;
+        PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
+        PlaceholderText = 'Paste JobId...';
+        Text = '';
+        TextColor3 = Library.FontColor;
+        TextSize = 13;
+        TextXAlignment = Enum.TextXAlignment.Left;
+        ZIndex = 94;
+        Parent = JoinInner;
+    });
+
+    Library:ApplyTextStroke(JoinBox);
+
+    Library:AddToRegistry(JoinBox, {
+        TextColor3 = 'FontColor';
+    });
+
+    CreatePanelButton('Join JobId', UDim2.new(1, 0, 0, 20), ServersContainer, function()
+        if JoinBox.Text ~= '' then
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, JoinBox.Text, LocalPlayer);
+            end);
+        else
+            Library:Notify('Paste a JobId first', 2);
+        end;
+    end);
+
+    local function RefreshServerInfo()
+        local Short = tostring(game.JobId);
+
+        if #Short > 12 then
+            Short = Short:sub(1, 8) .. '...';
+        end;
+
+        JobLabel.Text = 'JobId: ' .. Short;
+        ServerCount.Text = 'Players: ' .. #Players:GetPlayers() .. '/' .. tostring(Players.MaxPlayers);
+    end;
+
+    local PlayersOuter, PlayersContainer = CreatePanel('Players', 300, 264);
+
+    local PlayerList = Library:Create('ScrollingFrame', {
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+        LayoutOrder = 2;
+        Size = UDim2.new(1, 0, 1, -22);
+        CanvasSize = UDim2.new(0, 0, 0, 0);
+        ScrollBarThickness = 2;
+        ZIndex = 92;
+        Parent = PlayersContainer;
+    });
+
+    local PlayerLayout = Library:Create('UIListLayout', {
+        FillDirection = Enum.FillDirection.Vertical;
+        SortOrder = Enum.SortOrder.LayoutOrder;
+        Padding = UDim.new(0, 2);
+        Parent = PlayerList;
+    });
+
+    PlayerLayout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
+        PlayerList.CanvasSize = UDim2.fromOffset(0, PlayerLayout.AbsoluteContentSize.Y);
+    end);
+
+    local function AddPlayerRow(Target)
+        local Row = Library:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, 0, 0, 18);
+            ZIndex = 93;
+            Parent = PlayerList;
+        });
+
+        Library:CreateLabel({
+            Position = UDim2.new(0, 0, 0, 0);
+            Size = UDim2.new(1, -140, 0, 18);
+            TextSize = 13;
+            Text = Target.DisplayName .. ' (@' .. Target.Name .. ')';
+            TextXAlignment = Enum.TextXAlignment.Left;
+            TextTruncate = Enum.TextTruncate.AtEnd;
+            ZIndex = 94;
+            Parent = Row;
+        });
+
+        local function Mini(Text, OffsetX, Callback)
+            local BOuter = Library:Create('Frame', {
+                BackgroundColor3 = Color3.new(0, 0, 0);
+                BorderColor3 = Color3.new(0, 0, 0);
+                Position = UDim2.new(1, OffsetX, 0, 1);
+                Size = UDim2.new(0, 32, 0, 16);
+                ZIndex = 94;
+                Parent = Row;
+            });
+
+            local BInner = Library:Create('Frame', {
+                BackgroundColor3 = Library.MainColor;
+                BorderColor3 = Library.OutlineColor;
+                BorderMode = Enum.BorderMode.Inset;
+                Size = UDim2.new(1, 0, 1, 0);
+                ZIndex = 95;
+                Parent = BOuter;
+            });
+
+            Library:AddToRegistry(BInner, {
+                BackgroundColor3 = 'MainColor';
+                BorderColor3 = 'OutlineColor';
+            });
+
+            Library:CreateLabel({
+                Size = UDim2.new(1, 0, 1, 0);
+                TextSize = 12;
+                Text = Text;
+                ZIndex = 96;
+                Parent = BInner;
+            });
+
+            Library:OnHighlight(BOuter, BOuter,
+                { BorderColor3 = 'AccentColor' },
+                { BorderColor3 = 'Black' }
+            );
+
+            BOuter.InputBegan:Connect(function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+                    Library:SafeCallback(Callback);
+                end;
+            end);
+        end;
+
+        Mini('Go', -136, function()
+            local Char = LocalPlayer.Character;
+            local TChar = Target.Character;
+
+            if Char and TChar then
+                pcall(function()
+                    Char:PivotTo(TChar:GetPivot() * CFrame.new(0, 0, 4));
+                end);
+                Library:Notify('Teleported to ' .. Target.Name, 2);
+            else
+                Library:Notify('Character not available', 2);
+            end;
+        end);
+
+        Mini('Spec', -102, function()
+            local Cam = workspace.CurrentCamera;
+
+            if Library.Spectating == Target then
+                Library.Spectating = nil;
+
+                local Char = LocalPlayer.Character;
+                local Hum = Char and Char:FindFirstChildOfClass('Humanoid');
+
+                if Cam and Hum then
+                    Cam.CameraSubject = Hum;
+                end;
+
+                Library:Notify('Stopped spectating', 2);
+            else
+                local TChar = Target.Character;
+                local THum = TChar and TChar:FindFirstChildOfClass('Humanoid');
+
+                if Cam and THum then
+                    Library.Spectating = Target;
+                    Cam.CameraSubject = THum;
+                    Library:Notify('Spectating ' .. Target.Name, 2);
+                else
+                    Library:Notify('Cannot spectate ' .. Target.Name, 2);
+                end;
+            end;
+        end);
+
+        Mini('User', -68, function()
+            pcall(setclipboard, Target.Name);
+            Library:Notify('Copied @' .. Target.Name, 2);
+        end);
+
+        Mini('Disp', -34, function()
+            pcall(setclipboard, Target.DisplayName);
+            Library:Notify('Copied ' .. Target.DisplayName, 2);
+        end);
+    end;
+
+    local CountLabel;
+
+    local function RefreshPlayerList()
+        for _, Child in next, PlayerList:GetChildren() do
+            if not Child:IsA('UIListLayout') then
+                Child:Destroy();
+            end;
+        end;
+
+        local List = Players:GetPlayers();
+
+        table.sort(List, function(A, B)
+            return A.Name:lower() < B.Name:lower();
+        end);
+
+        for _, P in next, List do
+            AddPlayerRow(P);
+        end;
+
+        CountLabel.Text = 'Players (' .. #List .. ')';
+    end;
+
+    local PlayersHead = Library:Create('Frame', {
+        BackgroundTransparency = 1;
+        LayoutOrder = 1;
+        Size = UDim2.new(1, 0, 0, 18);
+        ZIndex = 92;
+        Parent = PlayersContainer;
+    });
+
+    CountLabel = Library:CreateLabel({
+        Position = UDim2.new(0, 0, 0, 0);
+        Size = UDim2.new(1, -70, 0, 18);
+        TextSize = 13;
+        Text = 'Players (0)';
+        TextXAlignment = Enum.TextXAlignment.Left;
+        ZIndex = 93;
+        Parent = PlayersHead;
+    });
+
+    local RefreshOuter = Library:Create('Frame', {
+        AnchorPoint = Vector2.new(1, 0);
+        BackgroundColor3 = Color3.new(0, 0, 0);
+        BorderColor3 = Color3.new(0, 0, 0);
+        Position = UDim2.new(1, 0, 0, 1);
+        Size = UDim2.new(0, 62, 0, 16);
+        ZIndex = 93;
+        Parent = PlayersHead;
+    });
+
+    local RefreshInner = Library:Create('Frame', {
+        BackgroundColor3 = Library.MainColor;
+        BorderColor3 = Library.OutlineColor;
+        BorderMode = Enum.BorderMode.Inset;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 94;
+        Parent = RefreshOuter;
+    });
+
+    Library:AddToRegistry(RefreshInner, {
+        BackgroundColor3 = 'MainColor';
+        BorderColor3 = 'OutlineColor';
+    });
+
+    Library:CreateLabel({
+        Size = UDim2.new(1, 0, 1, 0);
+        TextSize = 12;
+        Text = 'Refresh';
+        ZIndex = 95;
+        Parent = RefreshInner;
+    });
+
+    Library:OnHighlight(RefreshOuter, RefreshOuter,
+        { BorderColor3 = 'AccentColor' },
+        { BorderColor3 = 'Black' }
+    );
+
+    RefreshOuter.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+            RefreshPlayerList();
+        end;
+    end);
+
+    local InfoOuter, InfoContainer = CreatePanel('Info', 280, 190);
+
+    local InfoGame = game.Name;
+
+    pcall(function()
+        InfoGame = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name;
+    end);
+
+    CreateInfoRow('Game: ' .. InfoGame, InfoContainer);
+    CreateInfoRow('PlaceId: ' .. tostring(game.PlaceId), InfoContainer);
+
+    local InfoCount = CreateInfoRow('Players: ...', InfoContainer);
+    local FpsLabel = CreateInfoRow('FPS: ...', InfoContainer);
+    local PingLabel = CreateInfoRow('Ping: ...', InfoContainer);
+
+    CreatePanelButton('Copy PlaceId', UDim2.new(1, 0, 0, 20), InfoContainer, function()
+        pcall(setclipboard, tostring(game.PlaceId));
+        Library:Notify('Copied PlaceId', 2);
+    end);
+
+    CreatePanelButton('Copy JobId', UDim2.new(1, 0, 0, 20), InfoContainer, function()
+        pcall(setclipboard, tostring(game.JobId));
+        Library:Notify('Copied JobId', 2);
+    end);
+
+    local function RefreshInfo()
+        InfoCount.Text = 'Players: ' .. #Players:GetPlayers() .. '/' .. tostring(Players.MaxPlayers);
+    end;
+
+    local ExecName = 'Unknown';
+    local GetExec = rawget(getgenv(), 'identifyexecutor');
+
+    if type(GetExec) == 'function' then
+        pcall(function()
+            ExecName = tostring(GetExec());
+        end);
+    end;
+
+    CreateInfoRow('Executor: ' .. ExecName, InfoContainer);
+
+    if not Library._ToolbarStatsLoop then
+        Library._ToolbarStatsLoop = true;
+
+        task.spawn(function()
+            while ScreenGui.Parent do
+                local Start = os.clock();
+                local Frames = 0;
+
+                while os.clock() - Start < 0.5 do
+                    RenderStepped:Wait();
+                    Frames = Frames + 1;
+                end;
+
+                if InfoOuter.Visible then
+                    FpsLabel.Text = 'FPS: ' .. math.floor(Frames / (os.clock() - Start));
+
+                    local Ping = 'N/A';
+
+                    pcall(function()
+                        Ping = tostring(math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue()));
+                    end);
+
+                    PingLabel.Text = 'Ping: ' .. Ping .. ' ms';
+                end;
+            end;
+        end);
+    end;
+
+    local function SetToolbarActive(Name)
+        for Key, Btn in next, ToolbarButtons do
+            local Data = Library.RegistryMap[Btn.Inner];
+
+            if Key == Name then
+                Btn.Inner.BorderColor3 = Library.AccentColor;
+
+                if Data then
+                    Data.Properties.BorderColor3 = 'AccentColor';
+                end;
+            else
+                Btn.Inner.BorderColor3 = Library.OutlineColor;
+
+                if Data then
+                    Data.Properties.BorderColor3 = 'OutlineColor';
+                end;
+            end;
+        end;
+    end;
+
+    function Library:ShowToolbarPanel(Name)
+        if Library.OpenToolbarPanel == Name then
+            Library.ToolbarPanels[Name].Visible = false;
+            Library.OpenToolbarPanel = nil;
+            SetToolbarActive(nil);
+            return;
+        end;
+
+        for _, Frame in next, Library.ToolbarPanels do
+            Frame.Visible = false;
+        end;
+
+        local Frame = Library.ToolbarPanels[Name];
+
+        if Frame then
+            if Name == 'Players' then
+                RefreshPlayerList();
+            elseif Name == 'Servers' then
+                RefreshServerInfo();
+            elseif Name == 'Info' then
+                RefreshInfo();
+            end;
+
+            Frame.Visible = true;
+            Library.OpenToolbarPanel = Name;
+            SetToolbarActive(Name);
+        end;
+    end;
+
+    function Library:HideToolbarPanels()
+        for _, Frame in next, Library.ToolbarPanels do
+            Frame.Visible = false;
+        end;
+
+        Library.OpenToolbarPanel = nil;
+        SetToolbarActive(nil);
+    end;
+
+    local Tools = { 'Servers', 'Players', 'Info' };
+
+    for _, Tool in next, Tools do
+        local BOuter, BInner = CreatePanelButton(Tool, UDim2.new(0, 68, 0, 26), ButtonRow, function()
+            Library:ShowToolbarPanel(Tool);
+        end);
+
+        ToolbarButtons[Tool] = { Outer = BOuter; Inner = BInner; };
+    end;
+
+    Library.ToolbarHolder = Holder;
+
+    Library:GiveSignal(Players.PlayerAdded:Connect(function()
+        if Library.ToolbarPanels['Players'] and Library.ToolbarPanels['Players'].Visible then
+            RefreshPlayerList();
+        end;
+    end));
+
+    Library:GiveSignal(Players.PlayerRemoving:Connect(function(Player)
+        if Library.Spectating == Player then
+            Library.Spectating = nil;
+
+            local Cam = workspace.CurrentCamera;
+            local Char = LocalPlayer.Character;
+            local Hum = Char and Char:FindFirstChildOfClass('Humanoid');
+
+            if Cam and Hum then
+                pcall(function()
+                    Cam.CameraSubject = Hum;
+                end);
+            end;
+        end;
+
+        if Library.ToolbarPanels['Players'] and Library.ToolbarPanels['Players'].Visible then
+            RefreshPlayerList();
+        end;
+    end));
+end;
+
 function Library:SetWatermarkVisibility(Bool)
     Library.Watermark.Visible = Bool;
 end;
@@ -3728,6 +4405,14 @@ function Library:CreateWindow(...)
         task.wait(FadeTime);
 
         Outer.Visible = Toggled;
+
+        if Library.ToolbarHolder then
+            Library.ToolbarHolder.Visible = Toggled;
+
+            if not Toggled then
+                Library:HideToolbarPanels();
+            end;
+        end;
 
         Fading = false;
     end
