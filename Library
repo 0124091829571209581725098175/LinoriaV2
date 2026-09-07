@@ -2904,7 +2904,7 @@ do
     });
 
     local KeybindInner = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor;
+        BackgroundColor3 = Color3.fromRGB(18, 18, 18);
         BorderColor3 = Library.OutlineColor;
         BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
@@ -2913,7 +2913,9 @@ do
     });
 
     Library:AddToRegistry(KeybindInner, {
-        BackgroundColor3 = 'MainColor';
+        BackgroundColor3 = function()
+            return Color3.fromRGB(18, 18, 18);
+        end;
         BorderColor3 = 'OutlineColor';
     }, true);
 
@@ -2933,8 +2935,9 @@ do
         Size = UDim2.new(1, 0, 0, 20);
         Position = UDim2.fromOffset(5, 2),
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextSize = 13,
 
-        Text = 'Keybinds';
+        Text = 'keybinds';
         ZIndex = 104;
         Parent = KeybindInner;
     });
@@ -3269,17 +3272,26 @@ do
         Parent = ServersContainer;
     });
 
-    local SortModeOuter, _, SortModeLabel = CreatePanelButton('Sort: Players', UDim2.new(0.5, -2, 0, 18), SortRow, function()
+    local function SetPanelButtonText(Outer, Text)
+        for _, Desc in next, Outer:GetDescendants() do
+            if Desc:IsA('TextLabel') then
+                Desc.Text = Text;
+                return;
+            end;
+        end;
+    end;
+
+    local SortModeOuter = CreatePanelButton('Sort: Players', UDim2.new(0.5, -2, 0, 18), SortRow, function()
         Library.ServerSortMode = Library.ServerSortMode == 'Players' and 'Ping' or 'Players';
-        SortModeLabel.Text = 'Sort: ' .. Library.ServerSortMode;
+        SetPanelButtonText(SortModeOuter, 'Sort: ' .. Library.ServerSortMode);
         RenderServerList();
     end);
 
     SortModeOuter.Position = UDim2.new(0, 0, 0, 0);
 
-    local SortDirOuter, _, SortDirLabel = CreatePanelButton('Desc', UDim2.new(0.5, -2, 0, 18), SortRow, function()
+    local SortDirOuter = CreatePanelButton('Desc', UDim2.new(0.5, -2, 0, 18), SortRow, function()
         Library.ServerSortDesc = not Library.ServerSortDesc;
-        SortDirLabel.Text = Library.ServerSortDesc and 'Desc' or 'Asc';
+        SetPanelButtonText(SortDirOuter, Library.ServerSortDesc and 'Desc' or 'Asc');
         RenderServerList();
     end);
 
