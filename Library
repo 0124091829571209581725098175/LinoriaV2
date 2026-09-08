@@ -5140,11 +5140,16 @@ function Library:CreateWindow(...)
     do
         local Cam = workspace.CurrentCamera;
         local Viewport = Cam and Cam.ViewportSize or Vector2.new(1920, 1080);
-        local MaxX = math.max(10, Viewport.X - Config.Size.X.Offset - 10);
-        local MaxY = math.max(10, Viewport.Y - Config.Size.Y.Offset - 10);
 
         Config.Size = UDim2.fromOffset(math.min(Config.Size.X.Offset, math.max(200, Viewport.X - 20)), math.min(Config.Size.Y.Offset, math.max(200, Viewport.Y - 20)));
-        Config.Position = UDim2.new(Config.Position.X.Scale, math.clamp(Config.Position.X.Offset, 10, MaxX), Config.Position.Y.Scale, math.clamp(Config.Position.Y.Offset, 10, MaxY));
+
+        local AbsX = Config.Position.X.Scale * Viewport.X + Config.Position.X.Offset;
+        local AbsY = Config.Position.Y.Scale * Viewport.Y + Config.Position.Y.Offset;
+
+        AbsX = math.clamp(AbsX, 10, math.max(10, Viewport.X - Config.Size.X.Offset - 10));
+        AbsY = math.clamp(AbsY, 10, math.max(10, Viewport.Y - Config.Size.Y.Offset - 10));
+
+        Config.Position = UDim2.new(Config.Position.X.Scale, AbsX - Config.Position.X.Scale * Viewport.X, Config.Position.Y.Scale, AbsY - Config.Position.Y.Scale * Viewport.Y);
     end
 
     local Window = {
