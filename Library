@@ -14,7 +14,17 @@ local ProtectGui = protectgui or (syn and syn.protect_gui) or (function() end);
 local ScreenGui = Instance.new('ScreenGui');
 ProtectGui(ScreenGui);
 
+ScreenGui.Name = 'LinoriaLibrary';
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global;
+
+for _, Old in next, CoreGui:GetChildren() do
+    if Old ~= ScreenGui and Old:IsA('ScreenGui') and Old.Name == 'LinoriaLibrary' then
+        pcall(function()
+            Old:Destroy();
+        end);
+    end;
+end;
+
 ScreenGui.Parent = CoreGui;
 
 local Toggles = {};
