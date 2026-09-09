@@ -42,12 +42,12 @@ local Library = {
     FontColor = Color3.fromRGB(255, 255, 255);
     MainColor = Color3.fromRGB(24, 24, 24);
     BackgroundColor = Color3.fromRGB(16, 16, 16);
-    AccentColor = Color3.fromRGB(0, 85, 255);
+    AccentColor = Color3.fromRGB(255, 255, 255);
     OutlineColor = Color3.fromRGB(50, 50, 50);
     RiskColor = Color3.fromRGB(255, 50, 50),
 
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.Code,
+    Font = Enum.Font.GothamMedium,
 
     OpenedFrames = {};
     DependencyBoxes = {};
@@ -242,6 +242,11 @@ function Library:MakeDraggable(Instance, Cutoff)
 
             Library:AddToRegistry(GhostLine, {
                 Color = 'AccentColor';
+            });
+
+            Library:Create('UIScale', {
+                Scale = Library.UIScale or 1;
+                Parent = Ghost;
             });
 
             Instance.Visible = false;
@@ -2067,6 +2072,30 @@ do
             BorderColor3 = 'OutlineColor';
         });
 
+        local Check1 = Library:Create('Frame', {
+            AnchorPoint = Vector2.new(0.5, 0.5);
+            BackgroundColor3 = Color3.new(1, 1, 1);
+            BorderSizePixel = 0;
+            Position = UDim2.new(0, 4, 0, 8);
+            Rotation = 45;
+            Size = UDim2.new(0, 5, 0, 2);
+            Visible = false;
+            ZIndex = 7;
+            Parent = ToggleInner;
+        });
+
+        local Check2 = Library:Create('Frame', {
+            AnchorPoint = Vector2.new(0.5, 0.5);
+            BackgroundColor3 = Color3.new(1, 1, 1);
+            BorderSizePixel = 0;
+            Position = UDim2.new(0, 8, 0, 6);
+            Rotation = -45;
+            Size = UDim2.new(0, 9, 0, 2);
+            Visible = false;
+            ZIndex = 7;
+            Parent = ToggleInner;
+        });
+
         local ToggleLabel = Library:CreateLabel({
             Size = UDim2.new(0, 216, 1, 0);
             Position = UDim2.new(1, 6, 0, 0);
@@ -2111,6 +2140,9 @@ do
 
             Library.RegistryMap[ToggleInner].Properties.BackgroundColor3 = Toggle.Value and 'AccentColor' or 'MainColor';
             Library.RegistryMap[ToggleInner].Properties.BorderColor3 = Toggle.Value and 'AccentColorDark' or 'OutlineColor';
+
+            Check1.Visible = Toggle.Value;
+            Check2.Visible = Toggle.Value;
         end;
 
         function Toggle:OnChanged(Func)
@@ -2542,6 +2574,8 @@ do
             Parent = Scrolling;
         });
 
+        local RefreshCustomBox;
+
         function Dropdown:Display()
             local Values = Dropdown.Values;
             local Str = '';
@@ -2559,6 +2593,100 @@ do
             end;
 
             ItemList.Text = (Str == '' and '--' or Str);
+            RefreshCustomBox();
+        end;
+
+        local CustomKey = nil;
+
+        for _, V in next, Dropdown.Values do
+            if type(V) == 'string' and V:lower() == 'custom' then
+                CustomKey = V;
+                break;
+            end;
+        end;
+
+        local CustomOuter = nil;
+        local CustomBox = nil;
+
+        if CustomKey ~= nil then
+            CustomOuter = Library:Create('Frame', {
+                BackgroundColor3 = Color3.new(0, 0, 0);
+                BorderColor3 = Color3.new(0, 0, 0);
+                Size = UDim2.new(1, -4, 0, 20);
+                Visible = false;
+                ZIndex = 5;
+                Parent = Container;
+            });
+
+            local CustomInner = Library:Create('Frame', {
+                BackgroundColor3 = Library.MainColor;
+                BorderColor3 = Library.OutlineColor;
+                BorderMode = Enum.BorderMode.Inset;
+                Size = UDim2.new(1, 0, 1, 0);
+                ZIndex = 6;
+                Parent = CustomOuter;
+            });
+
+            Library:AddToRegistry(CustomInner, {
+                BackgroundColor3 = 'MainColor';
+                BorderColor3 = 'OutlineColor';
+            });
+
+            Library:OnHighlight(CustomOuter, CustomOuter,
+                { BorderColor3 = 'AccentColor' },
+                { BorderColor3 = 'Black' }
+            );
+
+            CustomBox = Library:Create('TextBox', {
+                BackgroundTransparency = 1;
+                ClearTextOnFocus = false;
+                Position = UDim2.new(0, 5, 0, 0);
+                Size = UDim2.new(1, -10, 1, 0);
+                Font = Library.Font;
+                PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
+                PlaceholderText = 'Custom value...';
+                Text = '';
+                TextColor3 = Library.FontColor;
+                TextSize = 14;
+                TextXAlignment = Enum.TextXAlignment.Left;
+                ZIndex = 7;
+                Parent = CustomInner;
+            });
+
+            Library:ApplyTextStroke(CustomBox);
+
+            Library:AddToRegistry(CustomBox, {
+                TextColor3 = 'FontColor';
+            });
+
+            CustomBox:GetPropertyChangedSignal('Text'):Connect(function()
+                if Info.Multi and Dropdown.Value[CustomKey] or (not Info.Multi) and Dropdown.Value == CustomKey then
+                    Library:SafeCallback(Dropdown.Callback, CustomBox.Text ~= '' and CustomBox.Text or CustomKey);
+                    Library:AttemptSave();
+                end;
+            end);
+        end;
+
+        RefreshCustomBox = function()
+            if CustomOuter == nil then
+                return;
+            end;
+
+            local Show = false;
+
+            if Info.Multi then
+                Show = Dropdown.Value[CustomKey] == true;
+            else
+                Show = Dropdown.Value == CustomKey;
+            end;
+
+            CustomOuter.Visible = Show;
+
+            if Show and not Info.Multi and CustomBox.Text ~= '' then
+                ItemList.Text = CustomBox.Text;
+            end;
+
+            Groupbox:Resize();
         end;
 
         function Dropdown:GetActiveValues()
@@ -2976,10 +3104,102 @@ do
             Groupbox:Resize();
         end;
 
+        local RefreshCustomBox;
+
         function Dropdown:Display()
             for _, Table in next, RowTables do
                 Table:UpdateButton();
             end;
+
+            RefreshCustomBox();
+        end;
+
+        local CustomKey = nil;
+
+        for _, V in next, Dropdown.Values do
+            if type(V) == 'string' and V:lower() == 'custom' then
+                CustomKey = V;
+                break;
+            end;
+        end;
+
+        local CustomOuter = nil;
+        local CustomBox = nil;
+
+        if CustomKey ~= nil then
+            CustomOuter = Library:Create('Frame', {
+                BackgroundColor3 = Color3.new(0, 0, 0);
+                BorderColor3 = Color3.new(0, 0, 0);
+                Size = UDim2.new(1, -4, 0, 20);
+                Visible = false;
+                ZIndex = 5;
+                Parent = Container;
+            });
+
+            local CustomInner = Library:Create('Frame', {
+                BackgroundColor3 = Library.MainColor;
+                BorderColor3 = Library.OutlineColor;
+                BorderMode = Enum.BorderMode.Inset;
+                Size = UDim2.new(1, 0, 1, 0);
+                ZIndex = 6;
+                Parent = CustomOuter;
+            });
+
+            Library:AddToRegistry(CustomInner, {
+                BackgroundColor3 = 'MainColor';
+                BorderColor3 = 'OutlineColor';
+            });
+
+            Library:OnHighlight(CustomOuter, CustomOuter,
+                { BorderColor3 = 'AccentColor' },
+                { BorderColor3 = 'Black' }
+            );
+
+            CustomBox = Library:Create('TextBox', {
+                BackgroundTransparency = 1;
+                ClearTextOnFocus = false;
+                Position = UDim2.new(0, 5, 0, 0);
+                Size = UDim2.new(1, -10, 1, 0);
+                Font = Library.Font;
+                PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
+                PlaceholderText = 'Custom value...';
+                Text = '';
+                TextColor3 = Library.FontColor;
+                TextSize = 14;
+                TextXAlignment = Enum.TextXAlignment.Left;
+                ZIndex = 7;
+                Parent = CustomInner;
+            });
+
+            Library:ApplyTextStroke(CustomBox);
+
+            Library:AddToRegistry(CustomBox, {
+                TextColor3 = 'FontColor';
+            });
+
+            CustomBox:GetPropertyChangedSignal('Text'):Connect(function()
+                if Info.Multi and Dropdown.Value[CustomKey] or (not Info.Multi) and Dropdown.Value == CustomKey then
+                    Library:SafeCallback(Dropdown.Callback, CustomBox.Text ~= '' and CustomBox.Text or CustomKey);
+                    Library:AttemptSave();
+                end;
+            end);
+        end;
+
+        RefreshCustomBox = function()
+            if CustomOuter == nil then
+                return;
+            end;
+
+            local Show = false;
+
+            if Info.Multi then
+                Show = Dropdown.Value[CustomKey] == true;
+            else
+                Show = Dropdown.Value == CustomKey;
+            end;
+
+            CustomOuter.Visible = Show;
+            Groupbox:Resize();
         end;
 
         function Dropdown:GetActiveValues()
@@ -3344,6 +3564,75 @@ do
     end;
 end;
 
+Library.UIScale = 1;
+Library.ScaleObjects = {};
+Library.ReducedMotion = false;
+Library.NotifyDuration = 5;
+Library.StreamerMode = 'Off';
+Library.StreamerNames = {};
+Library.UIFontName = 'GothamMedium';
+Library.UIFonts = { 'GothamMedium', 'Gotham', 'GothamBold', 'GothamBlack', 'Arial', 'Legacy', 'Code' };
+
+function Library:PlayerDisplayName(Target)
+    if Library.StreamerMode == 'Off' then
+        return Target.DisplayName .. ' (@' .. Target.Name .. ')';
+    end;
+
+    if Library.StreamerMode == 'Others' and Target == LocalPlayer then
+        return Target.DisplayName .. ' (@' .. Target.Name .. ')';
+    end;
+
+    return Library.StreamerNames[Target.UserId] or 'Player';
+end;
+
+function Library:SetUIFont(Name)
+    local Ok, Font = pcall(function()
+        return Enum.Font[Name];
+    end);
+
+    if not Ok or not Font then
+        return;
+    end;
+
+    Library.Font = Font;
+    Library.UIFontName = Name;
+
+    if Library.ToolbarHolder then
+        for _, Desc in next, Library.ToolbarHolder:GetDescendants() do
+            if Desc:IsA('TextLabel') or Desc:IsA('TextButton') or Desc:IsA('TextBox') then
+                Desc.Font = Font;
+            end;
+        end;
+    end;
+
+    for _, Frame in next, Library.ToolbarPanels do
+        for _, Desc in next, Frame:GetDescendants() do
+            if Desc:IsA('TextLabel') or Desc:IsA('TextButton') or Desc:IsA('TextBox') then
+                Desc.Font = Font;
+            end;
+        end;
+    end;
+end;
+
+function Library:SetUIScale(Scale)
+    Library.UIScale = Scale;
+
+    for _, S in next, Library.ScaleObjects do
+        S.Scale = Scale;
+    end;
+end;
+
+function Library:ApplyScaleTo(Gui)
+    local S = Library:Create('UIScale', {
+        Scale = Library.UIScale or 1;
+        Parent = Gui;
+    });
+
+    table.insert(Library.ScaleObjects, S);
+
+    return S;
+end;
+
 -- < Create other UI elements >
 do
     Library.NotificationArea = Library:Create('Frame', {
@@ -3354,6 +3643,8 @@ do
         ZIndex = 100;
         Parent = ScreenGui;
     });
+
+    Library:ApplyScaleTo(Library.NotificationArea);
 
     Library.NotificationLayout = Library:Create('UIListLayout', {
         Padding = UDim.new(0, 4);
@@ -3425,6 +3716,7 @@ do
     Library.Watermark = WatermarkOuter;
     Library.WatermarkText = WatermarkLabel;
     Library:MakeDraggable(Library.Watermark);
+    Library:ApplyScaleTo(Library.Watermark);
 
 
 
@@ -3499,6 +3791,7 @@ do
     Library.KeybindFrame = KeybindOuter;
     Library.KeybindContainer = KeybindContainer;
     Library:MakeDraggable(KeybindOuter);
+    Library:ApplyScaleTo(KeybindOuter);
 end;
 
 do
@@ -3508,9 +3801,6 @@ do
     Library.OpenToolbarPanel = nil;
     Library.Spectating = nil;
     Library.ThumbnailCache = {};
-    Library.ServerSortMode = 'Players';
-    Library.ServerSortDesc = true;
-
     local ToolbarButtons = {};
 
     local Holder = Library:Create('Frame', {
@@ -3518,7 +3808,7 @@ do
         BackgroundColor3 = Color3.new(0, 0, 0);
         BorderSizePixel = 0;
         Position = UDim2.new(0.5, 0, 0, 10);
-        Size = UDim2.new(0, 136, 0, 42);
+        Size = UDim2.new(0, 170, 0, 42);
         Visible = false;
         ZIndex = 90;
         Parent = ScreenGui;
@@ -3719,6 +4009,7 @@ do
         end);
 
         Library.ToolbarPanels[Name] = Outer;
+        Library:ApplyScaleTo(Outer);
 
         return Outer, Container;
     end;
@@ -4113,7 +4404,7 @@ do
             Position = UDim2.new(0, 24, 0, 0);
             Size = UDim2.new(1, -168, 0, 22);
             TextSize = 13;
-            Text = Target.DisplayName .. ' (@' .. Target.Name .. ')';
+            Text = Library:PlayerDisplayName(Target);
             TextXAlignment = Enum.TextXAlignment.Left;
             TextTruncate = Enum.TextTruncate.AtEnd;
             ZIndex = 94;
@@ -4172,7 +4463,7 @@ do
                 pcall(function()
                     Char:PivotTo(TChar:GetPivot() * CFrame.new(0, 0, 4));
                 end);
-                Library:Notify('Teleported to ' .. Target.Name, 2);
+                Library:Notify('Teleported to ' .. Library:PlayerDisplayName(Target), 2);
             else
                 Library:Notify('Character not available', 2);
             end;
@@ -4199,21 +4490,31 @@ do
                 if Cam and THum then
                     Library.Spectating = Target;
                     Cam.CameraSubject = THum;
-                    Library:Notify('Spectating ' .. Target.Name, 2);
+                    Library:Notify('Spectating ' .. Library:PlayerDisplayName(Target), 2);
                 else
-                    Library:Notify('Cannot spectate ' .. Target.Name, 2);
+                    Library:Notify('Cannot spectate ' .. Library:PlayerDisplayName(Target), 2);
                 end;
             end;
         end);
 
         Mini('User', -68, function()
             pcall(setclipboard, Target.Name);
-            Library:Notify('Copied @' .. Target.Name, 2);
+
+            if Library.StreamerMode == 'Off' then
+                Library:Notify('Copied @' .. Target.Name, 2);
+            else
+                Library:Notify('Copied username', 2);
+            end;
         end);
 
         Mini('Disp', -34, function()
             pcall(setclipboard, Target.DisplayName);
-            Library:Notify('Copied ' .. Target.DisplayName, 2);
+
+            if Library.StreamerMode == 'Off' then
+                Library:Notify('Copied ' .. Target.DisplayName, 2);
+            else
+                Library:Notify('Copied display name', 2);
+            end;
         end);
     end;
 
@@ -4238,6 +4539,12 @@ do
         table.sort(List, function(A, B)
             return A.Name:lower() < B.Name:lower();
         end);
+
+        Library.StreamerNames = {};
+
+        for i, P in next, List do
+            Library.StreamerNames[P.UserId] = 'Player' .. i;
+        end;
 
         local Shown = 0;
 
@@ -4483,7 +4790,7 @@ do
     end;
 
     local function FadePanel(Frame, Show, Name)
-        local Time = Library.MenuFadeTime or 0.2;
+        local Time = Library.ReducedMotion and 0 or (Library.MenuFadeTime or 0.2);
         local Cache = FadeCache[Frame];
 
         if not Cache then
@@ -4541,6 +4848,112 @@ do
         end;
     end;
 
+    local SettingsPanel, SettingsContainer = CreatePanel('Settings', 300, 236, 240, 200);
+
+    local SettingButtons = {};
+    local RefreshSettings;
+
+    local function AddSettingRow(Key, GetText, OnPress)
+        local BOuter, BInner, BLabel = CreatePanelButton('', UDim2.new(1, 0, 0, 20), SettingsContainer, function()
+            OnPress();
+            RefreshSettings();
+        end);
+
+        BLabel.Position = UDim2.new(0, 6, 0, 0);
+        BLabel.Size = UDim2.new(1, -6, 1, 0);
+        BLabel.TextSize = 13;
+        BLabel.TextXAlignment = Enum.TextXAlignment.Left;
+
+        SettingButtons[Key] = { Label = BLabel; GetText = GetText; };
+    end;
+
+    AddSettingRow('Style', function()
+        return 'Style: ' .. (Library.NotificationStyle or 'Default');
+    end, function()
+        local Styles = { 'Default', 'Gamesense', 'Simple', 'Gamesensical' };
+        local Idx = table.find(Styles, Library.NotificationStyle) or 1;
+        Library:SetNotificationStyle(Styles[Idx % #Styles + 1]);
+    end);
+
+    AddSettingRow('Position', function()
+        return 'Position: ' .. (Library.NotificationPosition or 'Bottom');
+    end, function()
+        local Positions = { 'Bottom', 'Top', 'Bottom Left', 'Bottom Right', 'Top Left', 'Top Right' };
+        local Idx = table.find(Positions, Library.NotificationPosition) or 1;
+        Library:SetNotificationPosition(Positions[Idx % #Positions + 1]);
+    end);
+
+    AddSettingRow('Duration', function()
+        return 'Duration: ' .. tostring(Library.NotifyDuration or 5) .. 's';
+    end, function()
+        local Durations = { 3, 5, 8, 10 };
+        local Idx = table.find(Durations, Library.NotifyDuration) or 2;
+        Library.NotifyDuration = Durations[Idx % #Durations + 1];
+    end);
+
+    AddSettingRow('Streamer', function()
+        return 'Streamer: ' .. (Library.StreamerMode or 'Off');
+    end, function()
+        local Modes = { 'Off', 'Others', 'Everyone' };
+        local Idx = table.find(Modes, Library.StreamerMode) or 1;
+        Library.StreamerMode = Modes[Idx % #Modes + 1];
+
+        if Library.ToolbarPanels['Players'] and Library.ToolbarPanels['Players'].Visible then
+            RefreshPlayerList();
+        end;
+    end);
+
+    AddSettingRow('Font', function()
+        return 'Font: ' .. (Library.UIFontName or 'GothamMedium');
+    end, function()
+        local Idx = table.find(Library.UIFonts, Library.UIFontName) or 1;
+        Library:SetUIFont(Library.UIFonts[Idx % #Library.UIFonts + 1]);
+    end);
+
+    AddSettingRow('Scale', function()
+        return 'Scale: ' .. tostring(math.floor((Library.UIScale or 1) * 100)) .. '%';
+    end, function()
+        local Scales = { 0.75, 1, 1.25, 1.5 };
+        local Idx = 2;
+
+        for i, S in next, Scales do
+            if math.abs(S - (Library.UIScale or 1)) < 0.01 then
+                Idx = i;
+                break;
+            end;
+        end;
+
+        Library:SetUIScale(Scales[Idx % #Scales + 1]);
+    end);
+
+    AddSettingRow('Motion', function()
+        if Library.ReducedMotion then
+            return 'Motion: Reduced';
+        end;
+
+        return 'Motion: Full';
+    end, function()
+        Library.ReducedMotion = not Library.ReducedMotion;
+    end);
+
+    AddSettingRow('Keybinds', function()
+        if Library.KeybindIndicatorEnabled then
+            return 'Keybinds: On';
+        end;
+
+        return 'Keybinds: Off';
+    end, function()
+        Library:SetKeybindIndicator(not Library.KeybindIndicatorEnabled);
+    end);
+
+    RefreshSettings = function()
+        for _, Entry in next, SettingButtons do
+            Entry.Label.Text = Entry.GetText();
+        end;
+    end;
+
+    RefreshSettings();
+
     local function SetToolbarActive(Name)
         for Key, Btn in next, ToolbarButtons do
             local Data = Library.RegistryMap[Btn.Inner];
@@ -4582,6 +4995,8 @@ do
                 RefreshServerInfo();
             elseif Name == 'Executor' then
                 RefreshInfo();
+            elseif Name == 'Settings' then
+                RefreshSettings();
             end;
 
             FadePanel(Frame, true, Name);
@@ -4703,10 +5118,40 @@ do
                 ZIndex = 96;
                 Parent = Box;
             });
+        elseif Kind == 'Settings' then
+            for i = 0, 2 do
+                local Line = Library:Create('Frame', {
+                    AnchorPoint = Vector2.new(0.5, 0.5);
+                    BackgroundColor3 = Library.FontColor;
+                    BorderSizePixel = 0;
+                    Position = UDim2.new(0.5, 0, 0.5, -5 + i * 5);
+                    Size = UDim2.new(0, 15, 0, 1);
+                    ZIndex = 95;
+                    Parent = Parent;
+                });
+
+                Library:AddToRegistry(Line, {
+                    BackgroundColor3 = 'FontColor';
+                });
+
+                local Knob = Library:Create('Frame', {
+                    AnchorPoint = Vector2.new(0.5, 0.5);
+                    BackgroundColor3 = Library.FontColor;
+                    BorderSizePixel = 0;
+                    Position = UDim2.new(0.5, -4 + i * 4, 0.5, -5 + i * 5);
+                    Size = UDim2.new(0, 3, 0, 3);
+                    ZIndex = 96;
+                    Parent = Parent;
+                });
+
+                Library:AddToRegistry(Knob, {
+                    BackgroundColor3 = 'FontColor';
+                });
+            end;
         end;
     end;
 
-    local Tools = { 'Servers', 'Players', 'Executor' };
+    local Tools = { 'Servers', 'Players', 'Executor', 'Settings' };
 
     for _, Tool in next, Tools do
         local BOuter, BInner = CreatePanelButton('', UDim2.new(0, 34, 0, 26), ButtonRow, function()
@@ -4720,6 +5165,7 @@ do
     end;
 
     Library.ToolbarHolder = Holder;
+    Library:ApplyScaleTo(Holder);
 
     Library:GiveSignal(Players.PlayerAdded:Connect(function()
         if Library.ToolbarPanels['Players'] and Library.ToolbarPanels['Players'].Visible then
@@ -4858,6 +5304,7 @@ function Library:NotifyGamesense(Text, Time)
     local XSize, YSize = Library:GetTextBounds(Text, Library.Font, 13);
 
     YSize = 26;
+    local D = Library.ReducedMotion and 0 or 0.3;
 
     local Outer = Library:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
@@ -4898,12 +5345,12 @@ function Library:NotifyGamesense(Text, Time)
         Parent = Outer;
     });
 
-    TweenService:Create(Outer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, XSize + 20, 0, YSize) }):Play();
+    TweenService:Create(Outer, TweenInfo.new(D, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, XSize + 20, 0, YSize) }):Play();
 
     task.spawn(function()
-        wait(Time or 5);
-        TweenService:Create(Outer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, 0, 0, YSize) }):Play();
-        wait(0.35);
+        wait(Time or Library.NotifyDuration or 5);
+        TweenService:Create(Outer, TweenInfo.new(D, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, 0, 0, YSize) }):Play();
+        wait(D + 0.05);
         Outer:Destroy();
     end);
 end;
@@ -4940,26 +5387,28 @@ function Library:NotifySimple(Text, Time)
     Label.TextTransparency = 1;
 
     local Stroke = Label:FindFirstChildOfClass('UIStroke');
+    local Din = Library.ReducedMotion and 0 or 0.25;
+    local Dout = Library.ReducedMotion and 0 or 0.4;
 
     if Stroke then
         Stroke.Transparency = 1;
     end;
 
-    TweenService:Create(Label, TweenInfo.new(0.25, Enum.EasingStyle.Linear), { TextTransparency = 0 }):Play();
+    TweenService:Create(Label, TweenInfo.new(Din, Enum.EasingStyle.Linear), { TextTransparency = 0 }):Play();
 
     if Stroke then
-        TweenService:Create(Stroke, TweenInfo.new(0.25, Enum.EasingStyle.Linear), { Transparency = 0 }):Play();
+        TweenService:Create(Stroke, TweenInfo.new(Din, Enum.EasingStyle.Linear), { Transparency = 0 }):Play();
     end;
 
     task.spawn(function()
-        wait(Time or 5);
-        TweenService:Create(Label, TweenInfo.new(0.4, Enum.EasingStyle.Linear), { TextTransparency = 1 }):Play();
+        wait(Time or Library.NotifyDuration or 5);
+        TweenService:Create(Label, TweenInfo.new(Dout, Enum.EasingStyle.Linear), { TextTransparency = 1 }):Play();
 
         if Stroke then
-            TweenService:Create(Stroke, TweenInfo.new(0.4, Enum.EasingStyle.Linear), { Transparency = 1 }):Play();
+            TweenService:Create(Stroke, TweenInfo.new(Dout, Enum.EasingStyle.Linear), { Transparency = 1 }):Play();
         end;
 
-        wait(0.45);
+        wait(Dout + 0.05);
         Label:Destroy();
     end);
 end;
@@ -5012,12 +5461,13 @@ function Library:NotifyGamesensical(Text, Time)
 
     Label.RichText = true;
 
-    TweenService:Create(Outer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, XSize + 14, 0, 20) }):Play();
+    local D = Library.ReducedMotion and 0 or 0.25;
+    TweenService:Create(Outer, TweenInfo.new(D, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, XSize + 14, 0, 20) }):Play();
 
     task.spawn(function()
-        wait(Time or 5);
-        TweenService:Create(Outer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, 0, 0, 20) }):Play();
-        wait(0.3);
+        wait(Time or Library.NotifyDuration or 5);
+        TweenService:Create(Outer, TweenInfo.new(D, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, 0, 0, 20) }):Play();
+        wait(D + 0.05);
         Outer:Destroy();
     end);
 end;
@@ -5034,6 +5484,7 @@ function Library:Notify(Text, Time)
     end;
 
     local XSize, YSize = Library:GetTextBounds(Text, Library.Font, 14);
+    local D = Library.ReducedMotion and 0 or 0.4;
 
     YSize = YSize + 7
 
@@ -5110,14 +5561,14 @@ function Library:Notify(Text, Time)
         BackgroundColor3 = 'AccentColor';
     }, true);
 
-    TweenService:Create(NotifyOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, XSize + 8 + 4, 0, YSize) }):Play();
+    TweenService:Create(NotifyOuter, TweenInfo.new(D, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, XSize + 8 + 4, 0, YSize) }):Play();
 
     task.spawn(function()
-        wait(Time or 5);
+        wait(Time or Library.NotifyDuration or 5);
 
-        TweenService:Create(NotifyOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, 0, 0, YSize) }):Play();
+        TweenService:Create(NotifyOuter, TweenInfo.new(D, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0, 0, 0, YSize) }):Play();
 
-        wait(0.4);
+        wait(D);
 
         NotifyOuter:Destroy();
     end);
@@ -5204,9 +5655,25 @@ function Library:CreateWindow(...)
     });
 
     Library:RemoveFromRegistry(WindowLabel);
+    WindowLabel.TextColor3 = Color3.new(1, 1, 1);
+
+    local TitleGradient = Library:Create('UIGradient', {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(0.5, Color3.new(0, 0, 0)),
+            ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+        });
+        Parent = WindowLabel;
+    });
 
     Library:GiveSignal(RenderStepped:Connect(function()
-        WindowLabel.TextColor3 = Library.CurrentRainbowColor or Library.AccentColor;
+        if Library.ReducedMotion then
+            TitleGradient.Offset = Vector2.new(0.5, 0);
+            return;
+        end;
+
+        local T = (math.sin(os.clock() * 1.5) + 1) / 2;
+        TitleGradient.Offset = Vector2.new(T, 0);
     end));
 
     local GameName = game.Name;
@@ -5542,6 +6009,25 @@ function Library:CreateWindow(...)
                         Library:SetKeybindIndicator(Value);
                     end;
                 });
+
+                Groupbox:AddSlider('UIScale', {
+                    Text = 'UI Scale';
+                    Default = 100;
+                    Min = 75;
+                    Max = 150;
+                    Rounding = 0;
+                    Callback = function(Value)
+                        Library:SetUIScale(Value / 100);
+                    end;
+                });
+
+                Groupbox:AddToggle('ReducedMotion', {
+                    Text = 'Reduced Motion';
+                    Default = false;
+                    Callback = function(Value)
+                        Library.ReducedMotion = Value;
+                    end;
+                });
             end;
 
             return Groupbox;
@@ -5787,7 +6273,7 @@ function Library:CreateWindow(...)
             return;
         end;
 
-        local FadeTime = Config.MenuFadeTime;
+        local FadeTime = Library.ReducedMotion and 0 or Config.MenuFadeTime;
         Fading = true;
         Toggled = (not Toggled);
         ModalElement.Modal = Toggled;
@@ -5831,7 +6317,9 @@ function Library:CreateWindow(...)
             end;
         end;
 
-        task.wait(FadeTime);
+        if FadeTime > 0 then
+            task.wait(FadeTime);
+        end;
 
         Outer.Visible = Toggled;
 
@@ -5867,6 +6355,7 @@ function Library:CreateWindow(...)
     if Config.AutoShow then task.spawn(Library.Toggle) end
 
     Window.Holder = Outer;
+    Library:ApplyScaleTo(Outer);
 
     return Window;
 end;
