@@ -3801,6 +3801,8 @@ do
     Library.OpenToolbarPanel = nil;
     Library.Spectating = nil;
     Library.ThumbnailCache = {};
+    Library.ServerSortMode = 'Players';
+    Library.ServerSortDesc = true;
     local ToolbarButtons = {};
 
     local Holder = Library:Create('Frame', {
@@ -4122,7 +4124,7 @@ do
 
         for _, Desc in next, Panel:GetDescendants() do
             if Desc.Name == 'SortModeBtn' then
-                SetPanelButtonText(Desc, 'Sort: ' .. Library.ServerSortMode);
+                SetPanelButtonText(Desc, 'Sort: ' .. (Library.ServerSortMode or 'Players'));
             elseif Desc.Name == 'SortDirBtn' then
                 SetPanelButtonText(Desc, Library.ServerSortDesc and 'Desc' or 'Asc');
             end;
