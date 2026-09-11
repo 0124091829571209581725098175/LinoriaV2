@@ -2079,30 +2079,6 @@ do
             BorderColor3 = 'OutlineColor';
         });
 
-        local Check1 = Library:Create('Frame', {
-            AnchorPoint = Vector2.new(0.5, 0.5);
-            BackgroundColor3 = Color3.new(1, 1, 1);
-            BorderSizePixel = 0;
-            Position = UDim2.new(0, 4, 0, 8);
-            Rotation = 45;
-            Size = UDim2.new(0, 5, 0, 2);
-            Visible = false;
-            ZIndex = 7;
-            Parent = ToggleInner;
-        });
-
-        local Check2 = Library:Create('Frame', {
-            AnchorPoint = Vector2.new(0.5, 0.5);
-            BackgroundColor3 = Color3.new(1, 1, 1);
-            BorderSizePixel = 0;
-            Position = UDim2.new(0, 8, 0, 6);
-            Rotation = -45;
-            Size = UDim2.new(0, 9, 0, 2);
-            Visible = false;
-            ZIndex = 7;
-            Parent = ToggleInner;
-        });
-
         local ToggleLabel = Library:CreateLabel({
             Size = UDim2.new(0, 216, 1, 0);
             Position = UDim2.new(1, 6, 0, 0);
@@ -2147,9 +2123,6 @@ do
 
             Library.RegistryMap[ToggleInner].Properties.BackgroundColor3 = Toggle.Value and 'AccentColor' or 'MainColor';
             Library.RegistryMap[ToggleInner].Properties.BorderColor3 = Toggle.Value and 'AccentColorDark' or 'OutlineColor';
-
-            Check1.Visible = Toggle.Value;
-            Check2.Visible = Toggle.Value;
         end;
 
         function Toggle:OnChanged(Func)
@@ -2636,6 +2609,7 @@ do
             Slider2.Groupbox = PairGroupbox;
 
             Slider2:Display();
+            PairGroupbox:AddBlank(6);
             PairGroupbox:Resize();
 
             Options[Idx] = Slider2;
