@@ -523,6 +523,12 @@ do
         end;
 
         ColorPicker:SetHSVFromRGB(ColorPicker.Value);
+        ColorPicker.RgbEnabled = false;
+        ColorPicker.GradientEnabled = false;
+        ColorPicker.GradientSecond = Color3.new(0, 0, 0);
+        ColorPicker.RgbConn = nil;
+        ColorPicker.GradConn = nil;
+        ColorPicker.GradFrom = nil;
 
         local DisplayFrame = Library:Create('Frame', {
             BackgroundColor3 = ColorPicker.Value;
@@ -553,7 +559,7 @@ do
             BackgroundColor3 = Color3.new(1, 1, 1);
             BorderColor3 = Color3.new(0, 0, 0);
             Position = UDim2.fromOffset(DisplayFrame.AbsolutePosition.X, DisplayFrame.AbsolutePosition.Y + 18),
-            Size = UDim2.fromOffset(230, Info.Transparency and 271 or 253);
+            Size = UDim2.fromOffset(230, Info.Transparency and 293 or 275);
             Visible = false;
             ZIndex = 15;
             Parent = ScreenGui,
@@ -704,6 +710,249 @@ do
             PlaceholderText = 'RGB color',
             TextColor3 = Library.FontColor
         });
+
+        local RgbRow = Library:Create('Frame', {
+            BackgroundTransparency = 1;
+            Position = UDim2.fromOffset(4, Info.Transparency and 272 or 251);
+            Size = UDim2.new(1, -8, 0, 18);
+            ZIndex = 18;
+            Parent = PickerFrameInner;
+        });
+
+        Library:Create('UIListLayout', {
+            FillDirection = Enum.FillDirection.Horizontal;
+            Padding = UDim.new(0, 4);
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = RgbRow;
+        });
+
+        local function MakeSmallBtn(Text)
+            local Outer = Library:Create('Frame', {
+                BackgroundColor3 = Color3.new(0, 0, 0);
+                BorderColor3 = Color3.new(0, 0, 0);
+                Size = UDim2.new(0, 54, 0, 18);
+                ZIndex = 18;
+                Parent = RgbRow;
+            });
+
+            local Inner = Library:Create('Frame', {
+                BackgroundColor3 = Library.MainColor;
+                BorderColor3 = Library.OutlineColor;
+                BorderMode = Enum.BorderMode.Inset;
+                Size = UDim2.new(1, 0, 1, 0);
+                ZIndex = 19;
+                Parent = Outer;
+            });
+
+            Library:AddToRegistry(Inner, {
+                BackgroundColor3 = 'MainColor';
+                BorderColor3 = 'OutlineColor';
+            });
+
+            local Label = Library:CreateLabel({
+                Size = UDim2.new(1, 0, 1, 0);
+                TextSize = 12;
+                Text = Text;
+                ZIndex = 20;
+                Parent = Inner;
+            });
+
+            Library:OnHighlight(Outer, Outer,
+                { BorderColor3 = 'AccentColor' },
+                { BorderColor3 = 'Black' }
+            );
+
+            return Outer, Inner, Label;
+        end;
+
+        local RgbOuter, RgbInner, RgbLabel = MakeSmallBtn('rgb');
+        local GradOuter, GradInner, GradLabel = MakeSmallBtn('gradient');
+
+        local GradPreviewOuter = Library:Create('Frame', {
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderColor3 = Color3.new(0, 0, 0);
+            Size = UDim2.new(0, 30, 0, 14);
+            ZIndex = 18;
+            Parent = RgbRow;
+        });
+
+        local GradPreviewInner = Library:Create('Frame', {
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 19;
+            Parent = GradPreviewOuter;
+        });
+
+        Library:AddToRegistry(GradPreviewInner, {
+            BorderColor3 = 'OutlineColor';
+        });
+
+        Library:AddToolTip('second gradient color (click to set from current)', GradPreviewOuter);
+        GradPreviewInner.BackgroundColor3 = ColorPicker.GradientSecond;
+
+        local function UpdateRgbBtn()
+            local Map = Library.RegistryMap[RgbLabel];
+            if ColorPicker.RgbEnabled then
+                RgbInner.BackgroundColor3 = Library.AccentColor;
+                RgbInner.BorderColor3 = Library.AccentColorDark;
+                Library.RegistryMap[RgbInner].Properties.BackgroundColor3 = 'AccentColor';
+                Library.RegistryMap[RgbInner].Properties.BorderColor3 = 'AccentColorDark';
+                RgbLabel.TextColor3 = Color3.new(1, 1, 1);
+                if Map then Map.Properties.TextColor3 = Color3.new(1, 1, 1); end;
+            else
+                RgbInner.BackgroundColor3 = Library.MainColor;
+                RgbInner.BorderColor3 = Library.OutlineColor;
+                Library.RegistryMap[RgbInner].Properties.BackgroundColor3 = 'MainColor';
+                Library.RegistryMap[RgbInner].Properties.BorderColor3 = 'OutlineColor';
+                RgbLabel.TextColor3 = Library.FontColor;
+                if Map then Map.Properties.TextColor3 = 'FontColor'; end;
+            end;
+        end;
+
+        local function UpdateGradBtn()
+            local Map = Library.RegistryMap[GradLabel];
+            if ColorPicker.GradientEnabled then
+                GradInner.BackgroundColor3 = Library.AccentColor;
+                GradInner.BorderColor3 = Library.AccentColorDark;
+                Library.RegistryMap[GradInner].Properties.BackgroundColor3 = 'AccentColor';
+                Library.RegistryMap[GradInner].Properties.BorderColor3 = 'AccentColorDark';
+                GradLabel.TextColor3 = Color3.new(1, 1, 1);
+                if Map then Map.Properties.TextColor3 = Color3.new(1, 1, 1); end;
+            else
+                GradInner.BackgroundColor3 = Library.MainColor;
+                GradInner.BorderColor3 = Library.OutlineColor;
+                Library.RegistryMap[GradInner].Properties.BackgroundColor3 = 'MainColor';
+                Library.RegistryMap[GradInner].Properties.BorderColor3 = 'OutlineColor';
+                GradLabel.TextColor3 = Library.FontColor;
+                if Map then Map.Properties.TextColor3 = 'FontColor'; end;
+            end;
+        end;
+
+        local function StopRgb()
+            if ColorPicker.RgbConn then
+                ColorPicker.RgbConn:Disconnect();
+                ColorPicker.RgbConn = nil;
+            end;
+        end;
+
+        local function StopGrad()
+            if ColorPicker.GradConn then
+                ColorPicker.GradConn:Disconnect();
+                ColorPicker.GradConn = nil;
+            end;
+        end;
+
+        local function StartRgb()
+            StopGrad();
+            ColorPicker.GradientEnabled = false;
+            UpdateGradBtn();
+            StopRgb();
+
+            if Library.ReducedMotion then
+                return;
+            end;
+
+            ColorPicker.RgbConn = RenderStepped:Connect(function()
+                if not ScreenGui.Parent then
+                    StopRgb();
+                    return;
+                end;
+
+                if not ColorPicker.RgbEnabled or Library.ReducedMotion then
+                    return;
+                end;
+
+                ColorPicker.Hue = (tick() * 0.35) % 1;
+                ColorPicker.Sat = 1;
+                ColorPicker.Vib = 1;
+                ColorPicker:Display();
+            end);
+        end;
+
+        local function StartGrad()
+            StopRgb();
+            ColorPicker.RgbEnabled = false;
+            UpdateRgbBtn();
+            StopGrad();
+
+            if Library.ReducedMotion then
+                return;
+            end;
+
+            ColorPicker.GradFrom = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib);
+
+            ColorPicker.GradConn = RenderStepped:Connect(function()
+                if not ScreenGui.Parent then
+                    StopGrad();
+                    return;
+                end;
+
+                if not ColorPicker.GradientEnabled or Library.ReducedMotion then
+                    return;
+                end;
+
+                local A = ColorPicker.GradFrom or ColorPicker.Value;
+                local B = ColorPicker.GradientSecond or Color3.new(0, 0, 0);
+                local T = (math.sin(tick() * 1.8) + 1) / 2;
+                local C = A:Lerp(B, T);
+                local H, S, V = Color3.toHSV(C);
+
+                ColorPicker.Hue = H;
+                ColorPicker.Sat = S;
+                ColorPicker.Vib = V;
+                ColorPicker:Display();
+            end);
+        end;
+
+        RgbOuter.InputBegan:Connect(function(Input)
+            if not Library:IsClickInput(Input) or Library:MouseIsOverOpenedFrame() then
+                return;
+            end;
+
+            ColorPicker.RgbEnabled = not ColorPicker.RgbEnabled;
+
+            if ColorPicker.RgbEnabled then
+                StartRgb();
+            else
+                StopRgb();
+            end;
+
+            UpdateRgbBtn();
+        end);
+
+        GradOuter.InputBegan:Connect(function(Input)
+            if not Library:IsClickInput(Input) or Library:MouseIsOverOpenedFrame() then
+                return;
+            end;
+
+            ColorPicker.GradientEnabled = not ColorPicker.GradientEnabled;
+
+            if ColorPicker.GradientEnabled then
+                StartGrad();
+            else
+                StopGrad();
+            end;
+
+            UpdateGradBtn();
+        end);
+
+        GradPreviewOuter.InputBegan:Connect(function(Input)
+            if not Library:IsClickInput(Input) or Library:MouseIsOverOpenedFrame() then
+                return;
+            end;
+
+            ColorPicker.GradientSecond = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib);
+            GradPreviewInner.BackgroundColor3 = ColorPicker.GradientSecond;
+
+            if ColorPicker.GradientEnabled then
+                ColorPicker.GradFrom = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib);
+            end;
+        end);
+
+        UpdateRgbBtn();
+        UpdateGradBtn();
 
         local TransparencyBoxOuter, TransparencyBoxInner, TransparencyCursor;
         
@@ -906,6 +1155,18 @@ do
         });
 
         HueBox.FocusLost:Connect(function(enter)
+            if ColorPicker.RgbEnabled then
+                ColorPicker.RgbEnabled = false;
+                StopRgb();
+                UpdateRgbBtn();
+            end;
+
+            if ColorPicker.GradientEnabled then
+                ColorPicker.GradientEnabled = false;
+                StopGrad();
+                UpdateGradBtn();
+            end;
+
             if enter then
                 local success, result = pcall(Color3.fromHex, HueBox.Text)
                 if success and typeof(result) == 'Color3' then
@@ -917,6 +1178,18 @@ do
         end)
 
         RgbBox.FocusLost:Connect(function(enter)
+            if ColorPicker.RgbEnabled then
+                ColorPicker.RgbEnabled = false;
+                StopRgb();
+                UpdateRgbBtn();
+            end;
+
+            if ColorPicker.GradientEnabled then
+                ColorPicker.GradientEnabled = false;
+                StopGrad();
+                UpdateGradBtn();
+            end;
+
             if enter then
                 local r, g, b = RgbBox.Text:match('(%d+),%s*(%d+),%s*(%d+)')
                 if r and g and b then
@@ -990,6 +1263,18 @@ do
 
         SatVibMap.InputBegan:Connect(function(Input)
             if Library:IsClickInput(Input) then
+                if ColorPicker.RgbEnabled then
+                    ColorPicker.RgbEnabled = false;
+                    StopRgb();
+                    UpdateRgbBtn();
+                end;
+
+                if ColorPicker.GradientEnabled then
+                    ColorPicker.GradientEnabled = false;
+                    StopGrad();
+                    UpdateGradBtn();
+                end;
+
                 local GetTouch, StopTouch = Library:TrackTouch(Input);
 
                 while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or GetTouch() ~= nil do
@@ -1018,6 +1303,18 @@ do
 
         HueSelectorInner.InputBegan:Connect(function(Input)
             if Library:IsClickInput(Input) then
+                if ColorPicker.RgbEnabled then
+                    ColorPicker.RgbEnabled = false;
+                    StopRgb();
+                    UpdateRgbBtn();
+                end;
+
+                if ColorPicker.GradientEnabled then
+                    ColorPicker.GradientEnabled = false;
+                    StopGrad();
+                    UpdateGradBtn();
+                end;
+
                 local GetTouch, StopTouch = Library:TrackTouch(Input);
 
                 while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or GetTouch() ~= nil do
@@ -1055,6 +1352,18 @@ do
         if TransparencyBoxInner then
             TransparencyBoxInner.InputBegan:Connect(function(Input)
                 if Library:IsClickInput(Input) then
+                    if ColorPicker.RgbEnabled then
+                        ColorPicker.RgbEnabled = false;
+                        StopRgb();
+                        UpdateRgbBtn();
+                    end;
+
+                    if ColorPicker.GradientEnabled then
+                        ColorPicker.GradientEnabled = false;
+                        StopGrad();
+                        UpdateGradBtn();
+                    end;
+
                     local GetTouch, StopTouch = Library:TrackTouch(Input);
 
                     while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or GetTouch() ~= nil do
@@ -1615,7 +1924,7 @@ do
             setmetatable(Label, BaseAddons);
         end
 
-        Groupbox:AddBlank(5);
+        Groupbox:AddBlank(4);
         Groupbox:Resize();
 
         return Label;
@@ -1806,7 +2115,7 @@ do
             Button:AddTooltip(Button.Tooltip)
         end
 
-        Groupbox:AddBlank(5);
+        Groupbox:AddBlank(4);
         Groupbox:Resize();
 
         return Button;
@@ -2028,7 +2337,7 @@ do
             Func(Textbox.Value);
         end;
 
-        Groupbox:AddBlank(5);
+        Groupbox:AddBlank(4);
         Groupbox:Resize();
 
         Options[Idx] = Textbox;
@@ -2162,7 +2471,7 @@ do
         end
 
         Toggle:Display();
-        Groupbox:AddBlank(Info.BlankSize or 5 + 2);
+        Groupbox:AddBlank(Info.BlankSize or 4);
         Groupbox:Resize();
 
         Toggle.TextLabel = ToggleLabel;
@@ -2609,7 +2918,7 @@ do
             Slider2.Groupbox = PairGroupbox;
 
             Slider2:Display();
-            PairGroupbox:AddBlank(6);
+            PairGroupbox:AddBlank(4);
             PairGroupbox:Resize();
 
             Options[Idx] = Slider2;
@@ -2618,7 +2927,7 @@ do
         end;
 
         Slider:Display();
-        Groupbox:AddBlank(Info.BlankSize or 6);
+        Groupbox:AddBlank(Info.BlankSize or 4);
         Groupbox:Resize();
 
         Options[Idx] = Slider;
@@ -3162,7 +3471,7 @@ do
             Dropdown:Display();
         end
 
-        Groupbox:AddBlank(Info.BlankSize or 5);
+        Groupbox:AddBlank(Info.BlankSize or 4);
         Groupbox:Resize();
 
         Options[Idx] = Dropdown;
@@ -3704,7 +4013,7 @@ do
             Dropdown:Display();
         end
 
-        Groupbox:AddBlank(Info.BlankSize or 5);
+        Groupbox:AddBlank(Info.BlankSize or 4);
         Groupbox:Resize();
 
         Options[Idx] = Dropdown;
