@@ -525,6 +525,7 @@ do
         ColorPicker:SetHSVFromRGB(ColorPicker.Value);
         ColorPicker.RgbEnabled = false;
         ColorPicker.RgbConn = nil;
+        ColorPicker.ChromaSpeed = 1;
 
         local DisplayFrame = Library:Create('Frame', {
             BackgroundColor3 = ColorPicker.Value;
@@ -555,7 +556,7 @@ do
             BackgroundColor3 = Color3.new(1, 1, 1);
             BorderColor3 = Color3.new(0, 0, 0);
             Position = UDim2.fromOffset(DisplayFrame.AbsolutePosition.X, DisplayFrame.AbsolutePosition.Y + 18),
-            Size = UDim2.fromOffset(230, 275);
+            Size = UDim2.fromOffset(230, 295);
             Visible = false;
             ZIndex = 15;
             Parent = ScreenGui,
@@ -786,6 +787,108 @@ do
             Parent = TransInner;
         });
 
+        local SpeedRow = Library:Create('Frame', {
+            BackgroundTransparency = 1;
+            Position = UDim2.fromOffset(4, 270);
+            Size = UDim2.new(1, -8, 0, 13);
+            ZIndex = 18;
+            Parent = PickerFrameInner;
+        });
+
+        local SpeedOuter = Library:Create('Frame', {
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderColor3 = Color3.new(0, 0, 0);
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 18;
+            Parent = SpeedRow;
+        });
+
+        local SpeedInner = Library:Create('Frame', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 19;
+            Parent = SpeedOuter;
+        });
+
+        Library:AddToRegistry(SpeedInner, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+        });
+
+        local SpeedFill = Library:Create('Frame', {
+            BackgroundColor3 = Library.AccentColor;
+            BorderColor3 = Library.AccentColorDark;
+            Size = UDim2.new(0, 0, 1, 0);
+            ZIndex = 20;
+            Parent = SpeedInner;
+        });
+
+        Library:AddToRegistry(SpeedFill, {
+            BackgroundColor3 = 'AccentColor';
+            BorderColor3 = 'AccentColorDark';
+        });
+
+        local SpeedHide = Library:Create('Frame', {
+            BackgroundColor3 = Library.AccentColor;
+            BorderSizePixel = 0;
+            Position = UDim2.new(1, 0, 0, 0);
+            Size = UDim2.new(0, 1, 1, 0);
+            ZIndex = 21;
+            Parent = SpeedFill;
+        });
+
+        Library:AddToRegistry(SpeedHide, {
+            BackgroundColor3 = 'AccentColor';
+        });
+
+        local SpeedLabel = Library:CreateLabel({
+            Size = UDim2.new(1, 0, 1, 0);
+            TextSize = 12;
+            ZIndex = 22;
+            Parent = SpeedInner;
+        });
+
+        Library:OnHighlight(SpeedOuter, SpeedOuter,
+            { BorderColor3 = 'AccentColor' },
+            { BorderColor3 = 'Black' }
+        );
+
+        local function UpdateSpeed()
+            SpeedLabel.Text = 'speed: ' .. tostring(ColorPicker.ChromaSpeed);
+            local X = math.ceil(Library:MapValue(ColorPicker.ChromaSpeed, 1, 5, 0, 222));
+            SpeedFill.Size = UDim2.new(0, X, 1, 0);
+            SpeedHide.Visible = not (X == 222 or X == 0);
+        end;
+
+        SpeedInner.InputBegan:Connect(function(Input)
+            if not Library:IsClickInput(Input) then
+                return;
+            end;
+
+            local mPos = Input.Position.X;
+            local gPos = SpeedFill.Size.X.Offset;
+            local Diff = mPos - (SpeedFill.AbsolutePosition.X + gPos);
+            local GetTouch, StopTouch = Library:TrackTouch(Input);
+
+            while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or GetTouch() ~= nil do
+                local Active = GetTouch();
+                local nMPos = Active and Active.Position.X or Mouse.X;
+                local nX = math.clamp(gPos + (nMPos - mPos) + Diff, 0, 222);
+                local nValue = math.clamp(math.floor(Library:MapValue(nX, 0, 222, 1, 5) + 0.5), 1, 5);
+                if nValue ~= ColorPicker.ChromaSpeed then
+                    ColorPicker.ChromaSpeed = nValue;
+                    UpdateSpeed();
+                end;
+                RenderStepped:Wait();
+            end;
+
+            StopTouch();
+        end);
+
+        UpdateSpeed();
+
         local function UpdateChromaBtn()
             local Map = Library.RegistryMap[ChromaLabel];
             if ColorPicker.RgbEnabled then
@@ -833,7 +936,8 @@ do
                     return;
                 end;
 
-                ColorPicker.Hue = (tick() * 0.35) % 1;
+                local s = ColorPicker.ChromaSpeed or 1;
+                ColorPicker.Hue = (tick() * (0.1166667 * s)) % 1;
                 ColorPicker.Sat = 1;
                 ColorPicker.Vib = 1;
                 ColorPicker:Display();
