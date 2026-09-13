@@ -841,7 +841,7 @@ do
         end;
 
         ChromaOuter.InputBegan:Connect(function(Input)
-            if not Library:IsClickInput(Input) or Library:MouseIsOverOpenedFrame() then
+            if not Library:IsClickInput(Input) then
                 return;
             end;
 
